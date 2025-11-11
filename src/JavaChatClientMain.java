@@ -1,16 +1,10 @@
-import java.awt.Color;
-import java.awt.EventQueue;
-import java.awt.Font;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
-import javax.swing.SwingConstants;
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import java.io.*;
+import java.net.*;
+import java.util.*;
 
 public class JavaChatClientMain extends JFrame {
 
@@ -19,122 +13,149 @@ public class JavaChatClientMain extends JFrame {
   private RoundedTextField txtIpAddress;
   private RoundedTextField txtPortNumber;
 
-  /**
-   * Launch the application.
-   */
+  private Socket socket;
+  private DataInputStream dis;
+  private DataOutputStream dos;
+  private FriendList friendList;
+
   public static void main(String[] args) {
-    EventQueue.invokeLater(new Runnable() {
-      public void run() {
-        try {
-          JavaChatClientMain frame = new JavaChatClientMain();
-          frame.setVisible(true);
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
+    EventQueue.invokeLater(() -> {
+      try {
+        JavaChatClientMain frame = new JavaChatClientMain();
+        frame.setVisible(true);
+      } catch (Exception e) {
+        e.printStackTrace();
       }
     });
   }
 
-  /**
-   * Create the frame.
-   */
   public JavaChatClientMain() {
+    setTitle("Mint Talk Login");
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    setBounds(100, 100, 258, 390);
+    setBounds(100, 100, 258, 400);
 
-    // 1. [변경] 기존 JPanel 대신 ImagePanel 사용
-    // "background.jpg" 부분에 실제 파일명을 쓰세요.
     contentPane = new ImagePanel("image/mint.jpg");
-
-    contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-    setContentPane(contentPane);
+    contentPane.setBorder(new EmptyBorder(5,5,5,5));
     contentPane.setLayout(null);
+    setContentPane(contentPane);
 
     JLabel lblTitle = new JLabel("Mint Talk");
     lblTitle.setFont(new Font("Serif", Font.BOLD, 48));
     lblTitle.setHorizontalAlignment(SwingConstants.CENTER);
     lblTitle.setBounds(12, 10, 218, 39);
-    // 2. [추가] 라벨 배경을 투명하게 (Opaque = 불투명)
+    lblTitle.setForeground(Color.WHITE);
     lblTitle.setOpaque(false);
-    // 3. [추가] 글자색을 설정 (배경이 어두우면 흰색, 밝으면 검은색)
-    lblTitle.setForeground(Color.WHITE); // 배경 이미지에 맞춰 색상 변경
     contentPane.add(lblTitle);
 
-    JLabel lblNewLabel = new JLabel("User Name");
-    lblNewLabel.setBounds(67, 60, 120, 25);
-    lblNewLabel.setHorizontalAlignment(SwingConstants.CENTER);
-    lblNewLabel.setOpaque(false); // [추가] 투명하게
-    lblNewLabel.setForeground(Color.WHITE); // [추가] 글자색
-    contentPane.add(lblNewLabel);
+    JLabel lblUser = new JLabel("User Name");
+    lblUser.setBounds(67, 60, 120, 25);
+    lblUser.setHorizontalAlignment(SwingConstants.CENTER);
+    lblUser.setForeground(Color.WHITE);
+    lblUser.setOpaque(false);
+    contentPane.add(lblUser);
 
     txtUserName = new RoundedTextField();
-    txtUserName.setHorizontalAlignment(SwingConstants.CENTER);
     txtUserName.setBounds(67, 90, 120, 33);
-    txtUserName.setBackground(Color.WHITE);
+    txtUserName.setHorizontalAlignment(SwingConstants.CENTER);
     contentPane.add(txtUserName);
-    txtUserName.setColumns(10);
-    // (JTextField는 투명하게 안해도 괜찮습니다)
 
-    JLabel lblIpAddress = new JLabel("IP Address");
-    lblIpAddress.setBounds(67, 138, 120, 25);
-    lblIpAddress.setHorizontalAlignment(SwingConstants.CENTER);
-    lblIpAddress.setOpaque(false); // [추가] 투명하게
-    lblIpAddress.setForeground(Color.WHITE); // [추가] 글자색
-    contentPane.add(lblIpAddress);
+    JLabel lblIp = new JLabel("IP Address");
+    lblIp.setBounds(67, 138, 120, 25);
+    lblIp.setHorizontalAlignment(SwingConstants.CENTER);
+    lblIp.setForeground(Color.WHITE);
+    lblIp.setOpaque(false);
+    contentPane.add(lblIp);
 
     txtIpAddress = new RoundedTextField();
+    txtIpAddress.setBounds(67, 168, 120, 33);
     txtIpAddress.setHorizontalAlignment(SwingConstants.CENTER);
     txtIpAddress.setText("127.0.0.1");
-    txtIpAddress.setColumns(10);
-    txtIpAddress.setBounds(67, 168, 120, 33);
-    txtIpAddress.setBackground(Color.WHITE);
     contentPane.add(txtIpAddress);
 
-    JLabel lblPortNumber = new JLabel("Port Number");
-    lblPortNumber.setBounds(67, 216, 120, 25);
-    lblPortNumber.setHorizontalAlignment(SwingConstants.CENTER);
-    lblPortNumber.setOpaque(false); // [추가] 투명하게
-    lblPortNumber.setForeground(Color.WHITE); // [추가] 글자색
-    contentPane.add(lblPortNumber);
+    JLabel lblPort = new JLabel("Port Number");
+    lblPort.setBounds(67, 216, 120, 25);
+    lblPort.setHorizontalAlignment(SwingConstants.CENTER);
+    lblPort.setForeground(Color.WHITE);
+    lblPort.setOpaque(false);
+    contentPane.add(lblPort);
 
     txtPortNumber = new RoundedTextField();
-    txtPortNumber.setText("30000");
-    txtPortNumber.setHorizontalAlignment(SwingConstants.CENTER);
-    txtPortNumber.setColumns(10);
     txtPortNumber.setBounds(67, 246, 120, 33);
-    txtPortNumber.setBackground(Color.WHITE);
+    txtPortNumber.setHorizontalAlignment(SwingConstants.CENTER);
+    txtPortNumber.setText("30000");
     contentPane.add(txtPortNumber);
 
     JButton btnConnect = new RoundedButton("LOGIN");
-    btnConnect.setFont(new Font("Tahoma", Font.BOLD, 14));
     btnConnect.setBounds(67, 300, 120, 38);
-
-    // 버튼 스타일 (이전과 동일)
-    btnConnect.setBackground(Color.white);
-    btnConnect.setForeground(Color.black);
+    btnConnect.setFont(new Font("Tahoma", Font.BOLD, 14));
+    btnConnect.setBackground(Color.WHITE);
+    btnConnect.setForeground(Color.BLACK);
     btnConnect.setBorderPainted(false);
     btnConnect.setFocusPainted(false);
-
-
-
-
     contentPane.add(btnConnect);
 
-    Myaction action = new Myaction();
+    // ActionListener
+    ActionListener action = e -> connectServer();
     btnConnect.addActionListener(action);
     txtUserName.addActionListener(action);
     txtIpAddress.addActionListener(action);
     txtPortNumber.addActionListener(action);
   }
 
-  class Myaction implements ActionListener {
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      String username = txtUserName.getText().trim();
-      String ip_addr = txtIpAddress.getText().trim();
-      String port_no = txtPortNumber.getText().trim();
-      JavaChatClientView view = new JavaChatClientView(username, ip_addr, port_no);
+  private void connectServer() {
+    String username = txtUserName.getText().trim();
+    String ip = txtIpAddress.getText().trim();
+    int port;
+    try {
+      port = Integer.parseInt(txtPortNumber.getText().trim());
+    } catch (NumberFormatException e) {
+      JOptionPane.showMessageDialog(this, "포트번호를 숫자로 입력하세요.");
+      return;
+    }
+
+    if (username.isEmpty()) {
+      JOptionPane.showMessageDialog(this, "사용자 이름을 입력하세요.");
+      return;
+    }
+
+    try {
+      socket = new Socket(ip, port);
+      dis = new DataInputStream(socket.getInputStream());
+      dos = new DataOutputStream(socket.getOutputStream());
+
+      // 서버에 username 전송 ("/login username")
+      dos.writeUTF("/login " + username);
+
+      // 친구 목록 창 생성
+      friendList = new FriendList(username);
+
+      // 서버에서 USERLIST 수신 스레드
+      new Thread(() -> {
+        try {
+          while (true) {
+            String msg = dis.readUTF();
+            if (msg.startsWith("USERLIST:")) {
+              String[] names = msg.substring(9).split(",");
+              Vector<String> users = new Vector<>(Arrays.asList(names));
+              SwingUtilities.invokeLater(() -> friendList.updateFriends(users));
+            }
+            // 필요 시 일반 메시지 처리도 여기에 추가 가능
+          }
+        } catch (IOException e) {
+          System.out.println("Disconnected from server.");
+          SwingUtilities.invokeLater(() -> {
+            friendList.dispose();
+            setVisible(true);
+          });
+        }
+      }).start();
+
+      // 로그인 창 닫기
       setVisible(false);
+
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(this, "서버 연결 실패: " + e.getMessage());
+      e.printStackTrace();
     }
   }
 }
