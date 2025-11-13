@@ -127,7 +127,7 @@ public class JavaChatClientMain extends JFrame {
       dos.writeUTF("/login " + username);
 
       // 친구 목록 창 생성
-      friendList = new FriendList(username);
+      friendList = new FriendList(username, ip, port);
 
       // 서버에서 USERLIST 수신 스레드
       new Thread(() -> {
