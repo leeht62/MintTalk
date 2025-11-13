@@ -78,7 +78,7 @@ public class JavaChatServer extends JFrame {
         textArea.setCaretPosition(textArea.getText().length());
     }
 
-    // --- 접속자 수락 스레드 ---
+    //접속 스레드
     class AcceptServer extends Thread {
         public void run() {
             while (true) {
@@ -97,7 +97,7 @@ public class JavaChatServer extends JFrame {
         }
     }
 
-    // --- 클라이언트 스레드 ---
+    //클라이언트 스레드
     class UserService extends Thread {
         private Socket socket;
         private DataInputStream dis;
@@ -173,7 +173,7 @@ public class JavaChatServer extends JFrame {
             }
         }
 
-        // --- 스레드 루프 ---
+        //스레드 루프
         public void run() {
             try {
                 while (true) {
