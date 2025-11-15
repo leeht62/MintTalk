@@ -87,7 +87,6 @@ public class JavaChatServer extends JFrame {
                     Socket clientSocket = serverSocket.accept();
                     appendText("New client connected: " + clientSocket);
                     UserService user = new UserService(clientSocket);
-                    userVec.add(user);
                     user.start();
                 } catch (IOException e) {
                     appendText("Accept error: " + e.getMessage());
@@ -117,7 +116,9 @@ public class JavaChatServer extends JFrame {
                     userName = tokens[1].trim();
                     appendText("User joined: " + userName);
                     userVec.add(this);
-                    userList.add(userName);
+                    if (!userList.contains(userName)) {
+                        userList.add(userName);
+                    }
 
                     writeOne("Welcome " + userName + "\n");
                     broadcast("[" + userName + "]님이 입장했습니다.\n");
@@ -149,7 +150,7 @@ public class JavaChatServer extends JFrame {
 
         // 모든 사용자에게 실시간 접속자 목록 전송
         private void sendUserListToAll() {
-            String listMsg = "USERLIST:" + String.join(",", userList);
+            String listMsg = "USERLIST:" + String.join(",", userList) + "\n";
             synchronized (userVec) {
                 for (UserService u : userVec) {
                     u.writeOne(listMsg);
@@ -209,7 +210,7 @@ public class JavaChatServer extends JFrame {
                     }
 
                     // 일반 메시지 브로드캐스트
-                    broadcast("[" + userName + "] " + msg);
+                    broadcast(msg+"\n");
                 }
             } catch (IOException e) {
                 disconnect();
