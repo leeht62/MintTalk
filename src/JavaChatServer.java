@@ -248,6 +248,15 @@ public class JavaChatServer extends JFrame {
 
                         continue;
                     }
+                    if (msg.startsWith("GET_ROOM_MEMBERS:")) {
+                        String roomName = msg.split(":")[1];
+                        ChatRoomInfo room = chatRooms.get(roomName);
+                        if (room != null) {
+                            String membersMsg = "ROOM_MEMBERS:" + roomName + ":" + String.join(",", room.members);
+                            writeOne(membersMsg);
+                        }
+                        continue;
+                    }
 
                 }
             } catch (IOException e) {

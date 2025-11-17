@@ -1,4 +1,4 @@
-//JavaChatClientView.java
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.DataInputStream;
@@ -33,11 +33,14 @@ public class JavaChatClientView extends JFrame {
   private JLabel lblUserName;
   private String currentRoomName;
 
+  // 💡 추가된 멤버 변수
+  private JLabel lblRoomName;
+  private JLabel lblMembers;
+
   /**
    * Create the frame.
    */
   public JavaChatClientView(String username, String ip_addr, String port_no,String roomName) {
-    // 💡 FriendList에서 전달된 통일된 방 이름 저장
     this.currentRoomName = roomName;
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setBounds(100, 100, 392, 462);
@@ -46,8 +49,17 @@ public class JavaChatClientView extends JFrame {
     setContentPane(contentPane);
     contentPane.setLayout(null);
 
+     // 💡 방 이름 표시 레이블 추가 및 위치 설정
+    // 💡 멤버 명단 표시 레이블 추가 및 위치 설정
+    lblMembers = new JLabel("Members: Loading...");
+    lblMembers.setBounds(12, 10, 352, 25);
+    lblMembers.setFont(new Font("Dialog", Font.BOLD, 14));
+    contentPane.add(lblMembers);
+
+
+    // 💡 JScrollPane 위치 조정 (lblRoomName, lblMembers 공간 확보)
     JScrollPane scrollPane = new JScrollPane();
-    scrollPane.setBounds(12, 10, 352, 340);
+    scrollPane.setBounds(12, 40, 352, 280);
     contentPane.add(scrollPane);
 
     textArea = new JTextArea();
@@ -81,6 +93,12 @@ public class JavaChatClientView extends JFrame {
       dos = new DataOutputStream(os);
 
       SendMessage("/login " + UserName);
+
+      // 💡 채팅방 멤버 명단 요청 (연결 및 로그인 후 바로 요청)
+      if (!currentRoomName.isEmpty()) {
+        SendMessage("GET_ROOM_MEMBERS:" + currentRoomName);
+      }
+
       ListenNetwork net = new ListenNetwork();
       net.start();
       Myaction action = new Myaction();
@@ -98,8 +116,23 @@ public class JavaChatClientView extends JFrame {
       while (true) {
         try {
           String msg = dis.readUTF();
+
+          // 💡 멤버 명단 수신 처리 추가
+          if (msg.startsWith("ROOM_MEMBERS:")) {
+            String[] parts = msg.split(":", 3);
+            if (parts.length >= 3) {
+              String receivedRoomName = parts[1];
+              String membersList = parts[2]; // member1,member2,...
+
+              if (receivedRoomName.equals(currentRoomName)) {
+                // 뷰의 멤버 명단 레이블 업데이트 및 채팅창에 알림
+                lblMembers.setText("Members: " + membersList.replace(",", ", "));
+                AppendText("현재 접속 인원: " + membersList.replace(",", ", ") + "\n");
+              }
+            }
+          }
           // 💡 ROOM_MSG만 현재 방 이름과 일치하는지 필터링
-          if (msg.startsWith("ROOM_MSG:")) {
+          else if (msg.startsWith("ROOM_MSG:")) {
             String[] parts = msg.split(":", 3);
             if (parts.length >= 3) {
               String receivedRoomName = parts[1];
