@@ -17,6 +17,7 @@ public class JavaChatServer extends JFrame {
     private ServerSocket serverSocket;
     private Vector<UserService> userVec = new Vector<>(); // 연결된 사용자
     private Vector<String> userList = new Vector<>();     // 접속자 이름
+    private HashMap<String, ChatRoomInfo> chatRooms = new HashMap<>();
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
@@ -121,7 +122,6 @@ public class JavaChatServer extends JFrame {
                     }
 
                     writeOne("Welcome " + userName + "\n");
-                    broadcast("[" + userName + "]님이 입장했습니다.\n");
 
                     sendUserListToAll();
                 }
@@ -164,7 +164,6 @@ public class JavaChatServer extends JFrame {
                 appendText("User left: " + userName);
                 userVec.remove(this);
                 userList.remove(userName);
-                broadcast("[" + userName + "]님이 퇴장했습니다.\n");
                 sendUserListToAll();
                 if (dis != null) dis.close();
                 if (dos != null) dos.close();
@@ -209,11 +208,66 @@ public class JavaChatServer extends JFrame {
                         continue;
                     }
 
-                    // 일반 메시지 브로드캐스트
-                    broadcast(msg+"\n");
+                    if (msg.startsWith("MAKE_ROOM:")) {
+                        try {
+                            String[] parts = msg.split(":");
+                            String roomName = parts[1];
+                            Vector<String> members = new Vector<>(Arrays.asList(parts[2].split(",")));
+
+                            // ChatRoomInfo 생성
+                            ChatRoomInfo room = new ChatRoomInfo(roomName, members);
+
+                            // 방 저장
+                            chatRooms.put(roomName, room);
+
+                            // 방에 속한 사람들에게 방 생성 메시지 전송
+                            synchronized (userVec) {
+                                for (UserService u : userVec) {
+                                    if (members.contains(u.userName)) {
+                                        u.writeOne("ROOM_CREATED:" + roomName + ":" + String.join(",", members));
+                                    }
+                                }
+                            }
+
+                            appendText("[SERVER] Room created: " + roomName);
+
+                        } catch (Exception ex) {
+                            appendText("[SERVER] Room create error: " + ex.getMessage());
+                        }
+
+                        continue; // 다음 메시지 처리
+                    }
+                    if (msg.startsWith("SEND_ROOM_MSG:")) {
+                        String[] parts = msg.split(":", 3);
+                        String roomName = parts[1];
+                        String message = parts[2];
+
+                        // 해당 방 멤버에게만 메시지 전송
+                        String formattedMsg = "[" + userName + "] " + message; // 방 이름은 클라이언트에서 필터링하므로 여기서 뺍니다.
+                        sendRoomMessage(roomName, formattedMsg);
+
+                        continue;
+                    }
+
                 }
             } catch (IOException e) {
                 disconnect();
+            }
+        }
+
+        private void sendRoomMessage(String roomName, String msg) {
+            ChatRoomInfo room = chatRooms.get(roomName);
+            if (room == null) return;
+
+            Vector<String> members = room.members;
+            // 💡 클라이언트가 현재 방과 메시지를 구분할 수 있도록 명확한 포맷 사용
+            String msgToSend = "ROOM_MSG:" + roomName + ":" + msg;
+            synchronized (userVec) {
+                for (UserService u : userVec) {
+                    if (members.contains(u.userName)) {
+                        u.writeOne(msgToSend);
+                    }
+                }
             }
         }
     }

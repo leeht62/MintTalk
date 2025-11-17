@@ -1,6 +1,8 @@
+//FriendList.java
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.*;
+import java.io.DataOutputStream;
 import java.util.*;
 
 public class FriendList extends JFrame {
@@ -10,12 +12,15 @@ public class FriendList extends JFrame {
   private String username;
   private String ip;
   private int port;
+  private DataOutputStream out;
   private Vector<String> friendNames = new Vector<>();
+  private static Vector<ChatRoomInfo> chatRooms = new Vector<>();
 
-  public FriendList(String username,String ip,int port) {
+  public FriendList(String username,String ip,int port,DataOutputStream out) {
     this.username = username;
     this.ip=ip;
     this.port=port;
+    this.out=out;
 
     setTitle("Friend List - " + username);
     setSize(300, 600);
@@ -25,29 +30,38 @@ public class FriendList extends JFrame {
     contentPane.setLayout(new BorderLayout());
     setContentPane(contentPane);
 
+
+
     JLabel lblUser = new JLabel("("+username+")" , SwingConstants.CENTER);
     lblUser.setFont(new Font("Dialog", Font.BOLD, 18));
     lblUser.setBorder(new EmptyBorder(10, 10, 10, 10));
     contentPane.add(lblUser, BorderLayout.NORTH);
 
-    JButton btnCreateChat = new JButton("그룹 채팅 만들기");
-    btnCreateChat.setFont(new Font("Dialog", Font.BOLD, 14));
-    btnCreateChat.setBackground(new Color(70, 130, 180));
-    btnCreateChat.setForeground(Color.WHITE);
-    btnCreateChat.setFocusPainted(false);
-    btnCreateChat.setBorder(new EmptyBorder(10, 10, 10, 10));
-
-    btnCreateChat.addActionListener(e -> createGroupChat());
-
-    contentPane.add(btnCreateChat, BorderLayout.SOUTH);
 
     friendPanel = new JPanel();
     friendPanel.setLayout(new BoxLayout(friendPanel, BoxLayout.Y_AXIS));
     friendPanel.setBackground(Color.WHITE);
 
+    JPanel topRight = new JPanel(new BorderLayout());
+    topRight.setBackground(Color.WHITE);
+
+    JButton btnOpenSelect = new JButton("➕ 대화");
+    btnOpenSelect.setFocusPainted(false);
+    btnOpenSelect.setBackground(Color.WHITE);
+    btnOpenSelect.setBorder(new EmptyBorder(5,5,5,5));
+
+    btnOpenSelect.addActionListener(e -> openSelectDialog());
+
+    contentPane.add(btnOpenSelect, BorderLayout.EAST);
+
     scrollPane = new JScrollPane(friendPanel);
     scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
     contentPane.add(scrollPane, BorderLayout.CENTER);
+
+    JButton btnRooms = new JButton("채팅창 확인");
+    btnRooms.addActionListener(e -> showChatRoomsDialog());
+    contentPane.add(btnRooms, BorderLayout.SOUTH);
+
 
     setVisible(true);
   }
@@ -65,52 +79,83 @@ public class FriendList extends JFrame {
     panel.setBorder(new MatteBorder(0, 0, 1, 0, new Color(220, 220, 220)));
     panel.setBackground(Color.WHITE);
 
-    JCheckBox checkBox = new JCheckBox();
-    checkBox.setBackground(Color.WHITE);
-    checkBox.setPreferredSize(new Dimension(40, 50));
 
     JLabel nameLabel = new JLabel(friendName);
     nameLabel.setFont(new Font("Dialog", Font.PLAIN, 16));
 
-    panel.add(checkBox, BorderLayout.WEST);
     panel.add(nameLabel, BorderLayout.CENTER);
 
     friendPanel.add(panel);
     friendPanel.revalidate();
     friendPanel.repaint();
   }
-  public void createGroupChat() {
-    Vector<String> selectedFriends = new Vector<>();
 
-    // friendPanel 안의 모든 컴포넌트 탐색
-    for (Component c : friendPanel.getComponents()) {
-      if (c instanceof JPanel panel) {
-        Component[] comps = panel.getComponents();
-        JCheckBox checkBox = null;
-        JLabel nameLabel = null;
 
-        for (Component comp : comps) {
-          if (comp instanceof JCheckBox cb) checkBox = cb;
-          if (comp instanceof JLabel lbl) nameLabel = lbl;
-        }
+  private void openSelectDialog() {
+    JDialog dialog = new JDialog(this, "대화상대 선택", true);
+    dialog.setSize(300, 350);
+    dialog.setLayout(new BorderLayout());
 
-        if (checkBox != null && nameLabel != null && checkBox.isSelected()) {
-          selectedFriends.add(nameLabel.getText());
-        }
+    JPanel listPanel = new JPanel();
+    listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
+
+    Vector<JCheckBox> boxes = new Vector<>();
+
+    for (String name : friendNames) {
+      if (name.equals(username)) continue;
+
+      JCheckBox box = new JCheckBox(name);
+      box.setFont(new Font("Dialog", Font.PLAIN, 15));
+      boxes.add(box);
+      listPanel.add(box);
+    }
+
+    JScrollPane sp = new JScrollPane(listPanel);
+    dialog.add(sp, BorderLayout.CENTER);
+
+    JPanel bottom = new JPanel();
+    JButton ok = new JButton("확인");
+    JButton cancel = new JButton("취소");
+
+    ok.addActionListener(ev -> {
+      Vector<String> selected = new Vector<>();
+      selected.add(username);  // 자기 자신 포함
+
+      for (JCheckBox cb : boxes) {
+        if (cb.isSelected()) selected.add(cb.getText());
       }
-    }
 
-    if (selectedFriends.isEmpty()) {
-      JOptionPane.showMessageDialog(this, "친구를 선택하세요!");
-      return;
-    }
+      if (selected.size() < 2) {
+        JOptionPane.showMessageDialog(dialog, "대화 상대를 선택하세요!");
+        return;
+      }
 
-    // 선택된 친구들과 그룹 채팅 시작
-    String members = String.join(", ", selectedFriends);
+      // 💡 서버에 전송할 방 이름 (참여자 이름_조합) 생성
+      // 이 이름을 ChatClientView에 전달해야 합니다.
+      String roomName = String.join("_", selected);
 
+      try {
+        out.writeUTF("MAKE_ROOM:" + roomName + ":" + String.join(",", selected));
+        out.flush();
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
 
-    // 예시: 서버 주소와 포트는 임시로 지정
-    new JavaChatClientView(username, ip, String.valueOf(port));
+      // 💡 통일된 roomName을 ChatClientView에 전달
+      openChatRoom(roomName);
+
+      dialog.dispose();
+    });
+
+    cancel.addActionListener(ev -> dialog.dispose());
+
+    bottom.add(ok);
+    bottom.add(cancel);
+
+    dialog.add(bottom, BorderLayout.SOUTH);
+
+    dialog.setLocationRelativeTo(this);
+    dialog.setVisible(true);
   }
 
   // 전체 친구 목록 갱신
@@ -118,7 +163,61 @@ public class FriendList extends JFrame {
     friendPanel.removeAll();
     friendNames.clear();
     for (String n : names) {
-      addFriend(n);
+      if (n == null) continue;
+      String trimmed = n.trim();
+      if (!trimmed.isEmpty() && !trimmed.equals(username)) {
+        addFriend(trimmed);
+      }
     }
+  }
+
+
+  // 💡 openChatRoom 메소드를 통일된 roomName을 받는 형태로 수정
+  private void openChatRoom(String roomName) {
+    // 채팅방 실행
+    new JavaChatClientView(username, ip, String.valueOf(port),roomName);
+  }
+
+  private void showChatRoomsDialog() {
+    JDialog dialog = new JDialog(this, "채팅방 목록", true);
+    dialog.setSize(300, 400);
+    dialog.setLayout(new BorderLayout());
+
+    JPanel listPanel = new JPanel();
+    listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
+
+    for (ChatRoomInfo room : chatRooms) {
+      JButton roomBtn = new JButton(room.toString());
+      roomBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+      // 방 클릭하면 재입장
+      roomBtn.addActionListener(e -> {
+        // 💡 room.roomName (서버가 인식하는 이름)을 ChatClientView에 전달
+        new JavaChatClientView(username, ip, String.valueOf(port),room.roomName);
+      });
+
+      listPanel.add(roomBtn);
+    }
+
+    JScrollPane sp = new JScrollPane(listPanel);
+    dialog.add(sp, BorderLayout.CENTER);
+
+    dialog.setLocationRelativeTo(this);
+    dialog.setVisible(true);
+  }
+
+  public void addChatRoom(ChatRoomInfo room) {
+    chatRooms.add(room);
+
+    JButton roomBtn = new JButton(room.toString());
+    roomBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+    roomBtn.addActionListener(e -> {
+      // 💡 room.roomName (서버가 인식하는 이름)을 ChatClientView에 전달
+      new JavaChatClientView(username, ip, String.valueOf(port),room.roomName);
+    });
+
+    friendPanel.add(roomBtn);
+    friendPanel.revalidate();
+    friendPanel.repaint();
   }
 }

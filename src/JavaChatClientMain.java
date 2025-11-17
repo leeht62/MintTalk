@@ -127,7 +127,7 @@ public class JavaChatClientMain extends JFrame {
       dos.writeUTF("/login " + username);
 
       // 친구 목록 창 생성
-      friendList = new FriendList(username, ip, port);
+      friendList = new FriendList(username, ip, port,dos);
 
       // 서버에서 USERLIST 수신 스레드
       new Thread(() -> {
@@ -138,6 +138,15 @@ public class JavaChatClientMain extends JFrame {
               String[] names = msg.substring(9).split(",");
               Vector<String> users = new Vector<>(Arrays.asList(names));
               SwingUtilities.invokeLater(() -> friendList.updateFriends(users));
+            }
+            if (msg.startsWith("ROOM_CREATED:")) {
+              String[] parts = msg.split(":");
+              String roomName = parts[1];
+              Vector<String> members = new Vector<>(Arrays.asList(parts[2].split(",")));
+              SwingUtilities.invokeLater(() -> {
+                ChatRoomInfo room = new ChatRoomInfo(roomName, members);
+                friendList.addChatRoom(room);
+              });
             }
             // 필요 시 일반 메시지 처리도 여기에 추가 가능
           }
