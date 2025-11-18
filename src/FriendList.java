@@ -1,7 +1,7 @@
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.*;
-import java.io.DataOutputStream;
+import java.io.*;
 import java.util.*;
 
 public class FriendList extends JFrame {
@@ -37,7 +37,8 @@ public class FriendList extends JFrame {
     myProfileLabel.setPreferredSize(new Dimension(50, 50));
     myProfileLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-    ImageIcon defaultIcon = getDefaultProfileIcon();
+    // 💡 초기 프로필 아이콘 설정 (기본 이미지)
+    ImageIcon defaultIcon = getProfileIcon("profile.jpg");
     if (defaultIcon != null) {
       myProfileLabel.setIcon(defaultIcon);
     } else {
@@ -90,7 +91,7 @@ public class FriendList extends JFrame {
   }
 
   // 단일 친구 추가 (친구 목록에 프로필 이미지 공간 포함)
-  public void addFriend(String friendName) {
+  public void addFriend(String friendName,String imageName) {
     if (friendName.equals(username)) return;
     if (friendNames.contains(friendName)) return;
 
@@ -102,32 +103,34 @@ public class FriendList extends JFrame {
     panel.setBorder(new MatteBorder(0, 0, 1, 0, new Color(220, 220, 220)));
     panel.setBackground(Color.WHITE);
 
-    // 💡 1. 프로필 이미지 공간 (JLabel)
+    // 💡 1. 프로필 이미지 공간 (JLabel) - 기본 이미지로 시작
     JLabel profileLabel = new JLabel();
     profileLabel.setPreferredSize(new Dimension(50, 50));
     profileLabel.setHorizontalAlignment(SwingConstants.CENTER);
     profileLabel.setBorder(new EmptyBorder(0, 5, 0, 0));
 
     // 기본 이미지 설정
-    ImageIcon defaultIcon = getDefaultProfileIcon();
+    ImageIcon defaultIcon = getProfileIcon("profile.jpg");
     if (defaultIcon != null) {
       profileLabel.setIcon(defaultIcon);
     } else {
       profileLabel.setText("👤");
     }
-
-    // 💡 2. 프로필 이미지 클릭 이벤트 추가 (친구 목록에서는 업로드 기능 비활성화)
-    profileLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-      public void mouseClicked(java.awt.event.MouseEvent evt) {
-        if (evt.getClickCount() == 1) {
-          JOptionPane.showMessageDialog(null, friendName + "님의 프로필입니다.");
-        }
-      }
-    });
+    ImageIcon currentIcon = getProfileIcon(imageName);
+    if (currentIcon != null) {
+      profileLabel.setIcon(currentIcon);
+    } else {
+      profileLabel.setText("👤");
+    }
 
     // 💡 3. 친구 이름 레이블
     JLabel nameLabel = new JLabel(friendName);
     nameLabel.setFont(new Font("Dialog", Font.PLAIN, 16));
+
+    // 💡 디버깅용: 이름 레이블을 찾기 위해 클라이언트 이름으로 이름을 지정
+    nameLabel.setName("FriendNameLabel_" + friendName);
+    profileLabel.setName("ProfileImageLabel_" + friendName);
+
 
     panel.add(profileLabel, BorderLayout.WEST);
     panel.add(nameLabel, BorderLayout.CENTER);
@@ -204,20 +207,50 @@ public class FriendList extends JFrame {
   }
 
   // 전체 친구 목록 갱신
-  public void updateFriends(Vector<String> names) {
+  public void updateFriends(Vector<String> names, HashMap<String, String> imageMap) {
     friendPanel.removeAll();
     friendNames.clear();
     for (String n : names) {
       if (n == null) continue;
       String trimmed = n.trim();
       if (!trimmed.isEmpty() && !trimmed.equals(username)) {
-        addFriend(trimmed);
+        // 💡 addFriend 호출 시 이미지 파일 이름을 전달합니다.
+        String imageName = imageMap.getOrDefault(trimmed, "profile.jpg");
+        addFriend(trimmed, imageName); // addFriend 시그니처 변경 필요
       }
     }
   }
 
 
-  // 💡 주석 해제: 채팅방 실행 메소드
+  // 💡 서버에서 수신된 메시지를 통해 친구의 프로필 이미지를 갱신합니다.
+  public void updateFriendProfileImage(String targetUser, String imageName) {
+    for (Component comp : friendPanel.getComponents()) {
+      if (comp instanceof JPanel) {
+        JPanel friendEntry = (JPanel) comp;
+
+        // 이름 레이블을 찾아 해당 사용자의 항목인지 확인합니다.
+        for (Component child : friendEntry.getComponents()) {
+          if (child instanceof JLabel && child.getName() != null && child.getName().equals("FriendNameLabel_" + targetUser)) {
+
+            // 프로필 이미지 레이블을 찾아 아이콘 갱신
+            for (Component profileChild : friendEntry.getComponents()) {
+              if (profileChild instanceof JLabel && profileChild.getName() != null && profileChild.getName().equals("ProfileImageLabel_" + targetUser)) {
+                JLabel profileLabel = (JLabel) profileChild;
+                ImageIcon newIcon = getProfileIcon(imageName);
+                profileLabel.setIcon(newIcon);
+                profileLabel.setText(""); // 텍스트 제거
+                friendEntry.revalidate();
+                friendEntry.repaint();
+                return; // 찾았으면 종료
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 💡 채팅방 실행 메소드
   private void openChatRoom(String roomName) {
     // 채팅방 실행
     new JavaChatClientView(username, ip, String.valueOf(port),roomName);
@@ -255,33 +288,32 @@ public class FriendList extends JFrame {
   public void addChatRoom(ChatRoomInfo room) { // ChatRoomInfo로 타입 복구
     // 💡 주석 해제: 채팅방 목록에 추가
     chatRooms.add(room);
-
-    JButton roomBtn = new JButton(room.toString());
-    roomBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-    roomBtn.addActionListener(e -> {
-      new JavaChatClientView(username, ip, String.valueOf(port),room.roomName);
-    });
-
-    friendPanel.add(roomBtn);
-    friendPanel.revalidate();
-    friendPanel.repaint();
   }
 
-  // 기본 프로필 이미지를 불러와 크기를 조정합니다.
-  private ImageIcon getDefaultProfileIcon() {
+  // 💡 지정된 이름의 프로필 이미지를 불러와 크기를 조정합니다.
+  private ImageIcon getProfileIcon(String imageName) {
+    if (imageName == null || imageName.isEmpty()) {
+      imageName = "profile.jpg"; // 기본 이미지로 폴백
+    }
     try {
-      // image/profile.jpg 경로는 그대로 유지
-      ImageIcon originalIcon = new ImageIcon("image/profile.jpg");
+      // 클라이언트 로컬의 'image' 폴더에 프로필 이미지가 저장되어 있다고 가정
+      ImageIcon originalIcon = new ImageIcon("image/" + imageName);
       Image image = originalIcon.getImage();
+      // 이미지 로드 실패 시, 기본 이미지 사용
+      if (image.getWidth(null) == -1) {
+        originalIcon = new ImageIcon("image/profile.jpg");
+        image = originalIcon.getImage();
+      }
+
       Image newimg = image.getScaledInstance(50, 50,  java.awt.Image.SCALE_SMOOTH);
       return new ImageIcon(newimg);
     } catch (Exception e) {
-      System.err.println("기본 이미지 파일을 찾을 수 없습니다: " + e.getMessage());
+      System.err.println("이미지 파일을 찾을 수 없습니다: image/" + imageName + " 또는 image/profile.jpg");
       return null;
     }
   }
 
-  // 파일 업로드 다이얼로그를 띄우고 이미지를 설정합니다.
+
   private void uploadProfileImage(JLabel profileLabel) {
     JFileChooser fileChooser = new JFileChooser();
     int result = fileChooser.showOpenDialog(this);
@@ -289,25 +321,51 @@ public class FriendList extends JFrame {
     if (result == JFileChooser.APPROVE_OPTION) {
       java.io.File selectedFile = fileChooser.getSelectedFile();
 
+      File imageDir = new File("image");
+      if (!imageDir.exists()) {
+        imageDir.mkdirs(); // 디렉토리가 없으면 생성
+      }
+
+      String imageName = selectedFile.getName();
+      File targetFile = new File(imageDir, imageName);
+
       try {
-        ImageIcon originalIcon = new ImageIcon(selectedFile.getAbsolutePath());
+        copyFile(selectedFile, targetFile);
+
+        ImageIcon originalIcon = new ImageIcon(targetFile.getAbsolutePath());
         Image image = originalIcon.getImage();
-        // 50x50 크기로 이미지 조정
-        Image newimg = image.getScaledInstance(50, 50,  java.awt.Image.SCALE_SMOOTH);
+        Image newimg = image.getScaledInstance(50, 50, java.awt.Image.SCALE_SMOOTH);
         ImageIcon newIcon = new ImageIcon(newimg);
 
         profileLabel.setIcon(newIcon);
-        profileLabel.setText(""); // 이미지가 성공적으로 로드되면 텍스트 제거
+        profileLabel.setText("");
 
-        // 💡 프로필 이미지 변경 사항을 서버에 통보하는 코드 추가 (멀티스레드 반영을 위함)
-        String imageName = selectedFile.getName();
         out.writeUTF("CHANGE_PROFILE_IMAGE:" + username + ":" + imageName);
         out.flush();
 
+      } catch (IOException e) {
+        JOptionPane.showMessageDialog(this, "파일 복사 또는 서버 통보에 실패했습니다: " + e.getMessage(),
+            "오류", JOptionPane.ERROR_MESSAGE);
       } catch (Exception ex) {
         JOptionPane.showMessageDialog(this, "이미지 로드에 실패했습니다: " + ex.getMessage(),
             "오류", JOptionPane.ERROR_MESSAGE);
       }
+    }
+  }
+  private void copyFile(File source, File dest) throws IOException {
+    InputStream is = null;
+    OutputStream os = null;
+    try {
+      is = new FileInputStream(source);
+      os = new FileOutputStream(dest);
+      byte[] buffer = new byte[1024];
+      int length;
+      while ((length = is.read(buffer)) > 0) {
+        os.write(buffer, 0, length);
+      }
+    } finally {
+      if (is != null) is.close();
+      if (os != null) os.close();
     }
   }
 }

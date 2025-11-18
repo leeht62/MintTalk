@@ -135,9 +135,23 @@ public class JavaChatClientMain extends JFrame {
           while (true) {
             String msg = dis.readUTF();
             if (msg.startsWith("USERLIST:")) {
-              String[] names = msg.substring(9).split(",");
+              String[] parts = msg.substring(9).split(":"); // "user1,user2...:user1=image1.jpg;user2=image2.jpg;"
+              String[] names = parts[0].split(","); // user1,user2...
+
               Vector<String> users = new Vector<>(Arrays.asList(names));
-              SwingUtilities.invokeLater(() -> friendList.updateFriends(users));
+
+              // 💡 이미지 정보를 파싱합니다.
+              HashMap<String, String> imageMap = new HashMap<>();
+              if (parts.length > 1) {
+                String[] imageEntries = parts[1].split(";"); // user1=image1.jpg, user2=image2.jpg
+                for (String entry : imageEntries) {
+                  String[] kv = entry.split("=");
+                  if (kv.length == 2) {
+                    imageMap.put(kv[0], kv[1]);
+                  }
+                }
+              }
+              SwingUtilities.invokeLater(() -> friendList.updateFriends(users, imageMap)); // FriendList.updateFriends 메서드 수정 필요
             }
             if (msg.startsWith("ROOM_CREATED:")) {
               String[] parts = msg.split(":");
@@ -148,12 +162,28 @@ public class JavaChatClientMain extends JFrame {
                 friendList.addChatRoom(room);
               });
             }
+            // 💡 프로필 이미지 변경 메시지 수신 및 FriendList 갱신 요청
+            if (msg.startsWith("CHANGE_PROFILE_IMAGE:")) {
+              String[] parts = msg.split(":");
+              if (parts.length >= 3) {
+                String targetUser = parts[1]; // 변경한 사용자 이름
+                String imageName = parts[2];  // 새 이미지 이름
+
+                // 자기 자신 외의 프로필 변경만 처리 (자신의 변경은 이미 로컬에서 적용됨)
+                if (!targetUser.equals(username)) {
+                  SwingUtilities.invokeLater(() -> {
+                    friendList.updateFriendProfileImage(targetUser, imageName);
+                  });
+                }
+              }
+            }
             // 필요 시 일반 메시지 처리도 여기에 추가 가능
           }
         } catch (IOException e) {
           System.out.println("Disconnected from server.");
           SwingUtilities.invokeLater(() -> {
-            friendList.dispose();
+            // friendList가 이미 닫혀 있을 수 있으므로 null 체크
+            if(friendList != null) friendList.dispose();
             setVisible(true);
           });
         }

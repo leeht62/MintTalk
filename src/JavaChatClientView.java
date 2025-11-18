@@ -42,14 +42,14 @@ public class JavaChatClientView extends JFrame {
    */
   public JavaChatClientView(String username, String ip_addr, String port_no,String roomName) {
     this.currentRoomName = roomName;
-    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     setBounds(100, 100, 392, 462);
     contentPane = new JPanel();
     contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
     setContentPane(contentPane);
     contentPane.setLayout(null);
 
-     // 💡 방 이름 표시 레이블 추가 및 위치 설정
+    // 💡 방 이름 표시 레이블 추가 및 위치 설정
     // 💡 멤버 명단 표시 레이블 추가 및 위치 설정
     lblMembers = new JLabel("Members: Loading...");
     lblMembers.setBounds(12, 10, 352, 25);

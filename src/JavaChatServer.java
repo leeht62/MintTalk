@@ -18,6 +18,7 @@ public class JavaChatServer extends JFrame {
     private Vector<UserService> userVec = new Vector<>(); // 연결된 사용자
     private Vector<String> userList = new Vector<>();     // 접속자 이름
     private HashMap<String, ChatRoomInfo> chatRooms = new HashMap<>();
+    private HashMap<String, String> userProfileImages = new HashMap<>();
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
@@ -150,10 +151,21 @@ public class JavaChatServer extends JFrame {
 
         // 모든 사용자에게 실시간 접속자 목록 전송
         private void sendUserListToAll() {
-            String listMsg = "USERLIST:" + String.join(",", userList) + "\n";
+            String listMsg = "USERLIST:" + String.join(",", userList);
+
+            // 💡 프로필 이미지 정보를 JSON 또는 유사한 문자열 형태로 추가
+            StringBuilder imageInfo = new StringBuilder();
+            for (String user : userList) {
+                String image = JavaChatServer.this.userProfileImages.getOrDefault(user, "profile.jpg");
+                imageInfo.append(user).append("=").append(image).append(";");
+            }
+
+            // 최종 메시지 포맷: USERLIST:user1,user2...:user1=image1.jpg;user2=image2.jpg;
+            String fullMsg = listMsg + ":" + imageInfo.toString();
+
             synchronized (userVec) {
                 for (UserService u : userVec) {
-                    u.writeOne(listMsg);
+                    u.writeOne(fullMsg); // \n 제거
                 }
             }
         }
@@ -255,6 +267,22 @@ public class JavaChatServer extends JFrame {
                             String membersMsg = "ROOM_MEMBERS:" + roomName + ":" + String.join(",", room.members);
                             writeOne(membersMsg);
                         }
+                        continue;
+                    }
+
+                    // 💡 프로필 이미지 변경 메시지 수신 및 브로드캐스트
+                    if (msg.startsWith("CHANGE_PROFILE_IMAGE:")) {
+                        String[] parts = msg.split(":");
+                        if (parts.length >= 3) {
+                            String targetUser = parts[1];
+                            String imageName = parts[2];
+                            // 💡 서버에 사용자-이미지 정보 저장
+                            // 'userProfileImages'는 JavaChatServer의 멤버이므로, UserService 내부에서는 외부 참조 필요
+                            JavaChatServer.this.userProfileImages.put(targetUser, imageName);
+                        }
+                        // CHANGE_PROFILE_IMAGE:username:imageName 형식의 메시지를 그대로 브로드캐스트합니다.
+                        broadcast(msg);
+                        appendText("[SERVER] Profile image change broadcasted: " + msg);
                         continue;
                     }
 
