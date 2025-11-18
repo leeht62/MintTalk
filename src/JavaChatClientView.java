@@ -1,3 +1,4 @@
+import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -8,219 +9,248 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
 public class JavaChatClientView extends JFrame {
-  private JPanel contentPane;
-  private JTextField txtInput;
-  private String UserName;
-  private JButton btnSend;
-  private JTextArea textArea;
-  private static final int BUF_LEN = 128; // Windows 처럼 BUF_LEN 을 정의
-  private Socket socket; // 연결소켓
-  private InputStream is;
-  private OutputStream os;
-  private DataInputStream dis;
-  private DataOutputStream dos;
-  private JLabel lblUserName;
-  private String currentRoomName;
+    private JPanel contentPane;
+    private RoundedTextField txtInput;
+    private String UserName;
+    private RoundedButton btnSend;
+    
+    // 채팅 목록 관련 변수
+    private JList<ChatMessage> chatList;
+    private DefaultListModel<ChatMessage> listModel;
+    
+    private Socket socket;
+    private InputStream is;
+    private OutputStream os;
+    private DataInputStream dis;
+    private DataOutputStream dos;
+    private JLabel lblUserName;
+    private String currentRoomName;
 
-  // 💡 추가된 멤버 변수
-  private JLabel lblRoomName;
-  private JLabel lblMembers;
+    private JLabel lblRoomName;
+    private JLabel lblMembers;
 
-  /**
-   * Create the frame.
-   */
-  public JavaChatClientView(String username, String ip_addr, String port_no,String roomName) {
-    this.currentRoomName = roomName;
-    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-    setBounds(100, 100, 392, 462);
-    contentPane = new JPanel();
-    contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-    setContentPane(contentPane);
-    contentPane.setLayout(null);
+    public JavaChatClientView(String username, String ip_addr, String port_no, String roomName) {
+        this.currentRoomName = roomName;
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setBounds(100, 100, 392, 462);
 
-    // 💡 방 이름 표시 레이블 추가 및 위치 설정
-    // 💡 멤버 명단 표시 레이블 추가 및 위치 설정
-    lblMembers = new JLabel("Members: Loading...");
-    lblMembers.setBounds(12, 10, 352, 25);
-    lblMembers.setFont(new Font("Dialog", Font.BOLD, 14));
-    contentPane.add(lblMembers);
+        contentPane = new ImagePanel("image/mint2.jpg");
+        contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+        setContentPane(contentPane);
+        contentPane.setLayout(null);
 
+        lblMembers = new JLabel("Members: Loading...");
+        lblMembers.setBounds(12, 10, 352, 25);
+        lblMembers.setFont(new Font("Dialog", Font.BOLD, 14));
+        lblMembers.setOpaque(false);
+        lblMembers.setForeground(Color.black);
+        contentPane.add(lblMembers);
 
-    // 💡 JScrollPane 위치 조정 (lblRoomName, lblMembers 공간 확보)
-    JScrollPane scrollPane = new JScrollPane();
-    scrollPane.setBounds(12, 40, 352, 280);
-    contentPane.add(scrollPane);
+        // --- JList 설정 (채팅창) ---
+        listModel = new DefaultListModel<>();
+        chatList = new JList<>(listModel);
+        chatList.setCellRenderer(new ChatCellRenderer()); // 렌더러 연결
+        chatList.setOpaque(false);
+        chatList.setBackground(new Color(0, 0, 0, 0));
+        chatList.setFocusable(false);
+        
+        JScrollPane scrollPane = new JScrollPane(chatList);
+        scrollPane.setBounds(12, 40, 352, 280);
+        scrollPane.setBorder(null);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getVerticalScrollBar().setOpaque(false);
+        contentPane.add(scrollPane);
+        // -------------------------
 
-    textArea = new JTextArea();
-    textArea.setEditable(false);
-    scrollPane.setViewportView(textArea);
+        txtInput = new RoundedTextField();
+        txtInput.setBounds(91, 365, 185, 40);
+        txtInput.setBackground(Color.WHITE);
+        txtInput.setFont(new Font("Malgun Gothic", Font.PLAIN, 14));
+        contentPane.add(txtInput);
+        txtInput.setColumns(10);
 
-    txtInput = new JTextField();
-    txtInput.setBounds(91, 365, 185, 40);
-    contentPane.add(txtInput);
-    txtInput.setColumns(10);
+        btnSend = new RoundedButton("Send");
+        btnSend.setBounds(288, 364, 76, 40);
+        btnSend.setBackground(new Color(0, 150, 136));
+        btnSend.setForeground(Color.WHITE);
+        btnSend.setFont(new Font("Tahoma", Font.BOLD, 14));
+        contentPane.add(btnSend);
 
-    btnSend = new JButton("Send");
-    btnSend.setBounds(288, 364, 76, 40);
-    contentPane.add(btnSend);
+        lblUserName = new JLabel("Name");
+        lblUserName.setHorizontalAlignment(SwingConstants.CENTER);
+        lblUserName.setBounds(12, 364, 67, 40);
+        lblUserName.setOpaque(false);
+        lblUserName.setForeground(Color.BLACK);
+        lblUserName.setFont(new Font("Tahoma", Font.BOLD, 14));
+        contentPane.add(lblUserName);
+        setVisible(true);
 
-    lblUserName = new JLabel("Name");
-    lblUserName.setHorizontalAlignment(SwingConstants.CENTER);
-    lblUserName.setBounds(12, 364, 67, 40);
-    contentPane.add(lblUserName);
-    setVisible(true);
+        AppendMessage("System", "User " + username + " connecting...", false);
+        UserName = username;
+        lblUserName.setText(username + ">");
 
-    AppendText("User " + username + " connecting " + ip_addr + " " + port_no + "\n");
-    UserName = username;
-    lblUserName.setText(username + ">");
-
-    try {
-      socket = new Socket(ip_addr, Integer.parseInt(port_no));
-      is = socket.getInputStream();
-      dis = new DataInputStream(is);
-      os = socket.getOutputStream();
-      dos = new DataOutputStream(os);
-
-      SendMessage("/login " + UserName);
-
-      // 💡 채팅방 멤버 명단 요청 (연결 및 로그인 후 바로 요청)
-      if (!currentRoomName.isEmpty()) {
-        SendMessage("GET_ROOM_MEMBERS:" + currentRoomName);
-      }
-
-      ListenNetwork net = new ListenNetwork();
-      net.start();
-      Myaction action = new Myaction();
-      btnSend.addActionListener(action);
-      txtInput.addActionListener(action);
-      txtInput.requestFocus();
-    } catch (NumberFormatException | IOException e) {
-      e.printStackTrace();
-      AppendText("connect error");
-    }
-  }
-
-  class ListenNetwork extends Thread {
-    public void run() {
-      while (true) {
         try {
-          String msg = dis.readUTF();
+            socket = new Socket(ip_addr, Integer.parseInt(port_no));
+            is = socket.getInputStream();
+            dis = new DataInputStream(is);
+            os = socket.getOutputStream();
+            dos = new DataOutputStream(os);
 
-          // 💡 멤버 명단 수신 처리 추가
-          if (msg.startsWith("ROOM_MEMBERS:")) {
-            String[] parts = msg.split(":", 3);
-            if (parts.length >= 3) {
-              String receivedRoomName = parts[1];
-              String membersList = parts[2]; // member1,member2,...
+            SendMessage("/login " + UserName);
 
-              if (receivedRoomName.equals(currentRoomName)) {
-                // 뷰의 멤버 명단 레이블 업데이트 및 채팅창에 알림
-                lblMembers.setText("Members: " + membersList.replace(",", ", "));
-                AppendText("현재 접속 인원: " + membersList.replace(",", ", ") + "\n");
-              }
+            if (!currentRoomName.isEmpty()) {
+                SendMessage("GET_ROOM_MEMBERS:" + currentRoomName);
             }
-          }
-          // 💡 ROOM_MSG만 현재 방 이름과 일치하는지 필터링
-          else if (msg.startsWith("ROOM_MSG:")) {
-            String[] parts = msg.split(":", 3);
-            if (parts.length >= 3) {
-              String receivedRoomName = parts[1];
-              String actualMsg = parts[2];
-              // 💡 현재 보고 있는 방 이름과 메시지의 방 이름이 일치하는 경우에만 출력
-              if (receivedRoomName.equals(currentRoomName)) {
-                AppendText(actualMsg + "\n");
-              }
-            }
-          }
-          else if (msg.startsWith("ROOM_CREATED:") || msg.startsWith("USERLIST:")) {
-            continue;
-          }
-          else {
-            AppendText(msg);
-          }
 
-        } catch (IOException e) {
-          AppendText("dis.read() error\n"); // 오류 발생 시 줄 바꿈 추가
+            ListenNetwork net = new ListenNetwork();
+            net.start();
+            Myaction action = new Myaction();
+            btnSend.addActionListener(action);
+            txtInput.addActionListener(action);
+            txtInput.requestFocus();
+        } catch (NumberFormatException | IOException e) {
+            e.printStackTrace();
+            AppendMessage("Error", "Connect error", false);
+        }
+    }
+
+    // 네트워크 수신 스레드
+ // JavaChatClientView.java 내부의 ListenNetwork 클래스 수정
+
+    class ListenNetwork extends Thread {
+      public void run() {
+        while (true) {
           try {
-            dos.close();
-            dis.close();
-            socket.close();
-            break;
-          } catch (Exception ee) {
-            break;
+            String msg = dis.readUTF();
+
+            if (msg.startsWith("ROOM_MEMBERS:")) {
+              String[] parts = msg.split(":", 3);
+              if (parts.length >= 3) {
+                String receivedRoomName = parts[1];
+                String membersList = parts[2]; 
+
+                if (receivedRoomName.equals(currentRoomName)) {
+                  lblMembers.setText("Members: " + membersList.replace(",", ", "));
+                  AppendMessage("System", "현재 접속 인원: " + membersList.replace(",", ", "), false);
+                }
+              }
+            }
+            else if (msg.startsWith("ROOM_MSG:")) {
+              String[] parts = msg.split(":", 3);
+              if (parts.length >= 3) {
+                String receivedRoomName = parts[1];
+                String actualMsg = parts[2];
+                
+                if (receivedRoomName.equals(currentRoomName)) {
+                  String sender = "Unknown";
+                  String message = actualMsg;
+                  
+                  // [수정] 파싱 로직 강화 (공백 제거 및 디버깅)
+                  // 형식: "[이름] 내용" 또는 "[이름]내용" 모두 처리
+                  if(actualMsg.startsWith("[") && actualMsg.contains("]")) {
+                      int endOfSender = actualMsg.indexOf("]");
+                      // 이름 추출 및 앞뒤 공백 제거 (.trim())
+                      sender = actualMsg.substring(1, endOfSender).trim(); 
+                      // 메시지 추출 (] 뒤의 모든 내용)
+                      message = actualMsg.substring(endOfSender + 1).trim();
+                  }
+                  
+                  // [중요] 내 이름과 보낸 사람 이름 비교
+                  boolean isMine = sender.equals(UserName);
+                  
+                  // [디버깅용 로그] 이클립스 콘솔창을 확인해보세요!
+                  System.out.println("보낸사람: [" + sender + "] / 내이름: [" + UserName + "] -> 내꺼인가? " + isMine);
+                  
+                  AppendMessage(sender, message, isMine);
+                }
+              }
+            }
+            else if (msg.startsWith("ROOM_CREATED:") || msg.startsWith("USERLIST:")) {
+              continue;
+            }
+            else {
+              AppendMessage("System", msg, false);
+            }
+
+          } catch (IOException e) {
+            AppendMessage("Error", "Connection lost", false);
+            try {
+              dos.close();
+              dis.close();
+              socket.close();
+              break;
+            } catch (Exception ee) {
+              break;
+            }
           }
         }
       }
     }
-  }
 
-  // 메시지를 입력 후 Send 버튼 또는  keyboard enter key를 치면 서버로(다른 사용자에게) 전송
-  class Myaction implements ActionListener {
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      if (e.getSource() == btnSend || e.getSource() == txtInput) {
-        String inputMsg = txtInput.getText().trim();
+    // 버튼 액션 처리 클래스 (에러 수정됨)
+    class Myaction implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (e.getSource() == btnSend || e.getSource() == txtInput) {
+                String inputMsg = txtInput.getText().trim();
+                if (inputMsg.isEmpty()) return;
 
-        if (!currentRoomName.isEmpty()) {
-          // 🚨 방 메시지 형식으로 서버에 전송 🚨
-          // 💡 통일된 currentRoomName을 사용
-          String msgToSend = "SEND_ROOM_MSG:" + currentRoomName + ":" + inputMsg;
-          SendMessage(msgToSend);
-        } else {
-          // 일반 채팅 또는 기존 처리 유지
-          // 현재 코드에선 일반 채팅이 없으므로, exit 처리만 고려
-          if (inputMsg.equals("/exit")) {
-            SendMessage("/exit");
-            System.exit(0);
-          } else if (inputMsg.startsWith("/to ")) {
-            // 귓속말 처리도 SendMessage(inputMsg)로 전송
-            SendMessage(inputMsg);
-          } else {
-            // 방이 없는 경우 일반 메시지 처리 (필요하다면)
-            // 현재 구조상 방에서만 메시지 송수신 가정
-            SendMessage(inputMsg);
-          }
+                if (!currentRoomName.isEmpty()) {
+                    String msgToSend = "SEND_ROOM_MSG:" + currentRoomName + ":" + inputMsg;
+                    SendMessage(msgToSend);
+                } else {
+                    if (inputMsg.equals("/exit")) {
+                        SendMessage("/exit");
+                        System.exit(0);
+                    } else {
+                        SendMessage(inputMsg);
+                    }
+                }
+
+                txtInput.setText("");
+                txtInput.requestFocus();
+            }
         }
-
-        txtInput.setText("");
-        txtInput.requestFocus();
-      }
     }
-  }
 
-  // 화면에 출력
-  public void AppendText(String msg) {
-    textArea.append(msg);
-    textArea.setCaretPosition(textArea.getText().length());
-  }
+    // 채팅 메시지 추가 메서드 (JList용)
+    public void AppendMessage(String sender, String message, boolean isMine) {
+        ChatMessage chatMessage = new ChatMessage(sender, message, isMine);
+        listModel.addElement(chatMessage);
 
-
-  // Server에게 network로 전송
-  public void SendMessage(String msg) {
-    try {
-      // Use writeUTF to send messages
-      dos.writeUTF(msg);
-    } catch (IOException e) {
-      AppendText("dos.write() error");
-      try {
-        dos.close();
-        dis.close();
-        socket.close();
-      } catch (IOException e1) {
-        e1.printStackTrace();
-        System.exit(0);
-      }
+        // 자동 스크롤
+        int lastIndex = listModel.getSize() - 1;
+        if (lastIndex >= 0) {
+            chatList.ensureIndexIsVisible(lastIndex);
+        }
     }
-  }
+
+    // 서버로 메시지 전송
+    public void SendMessage(String msg) {
+        try {
+            dos.writeUTF(msg);
+        } catch (IOException e) {
+            AppendMessage("Error", "dos.write() error", false);
+            try {
+                dos.close();
+                dis.close();
+                socket.close();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+                System.exit(0);
+            }
+        }
+    }
 }
