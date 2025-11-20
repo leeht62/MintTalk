@@ -313,45 +313,59 @@ public class FriendList extends JFrame {
     }
   }
 
+//FriendList.java 내부의 uploadProfileImage 메서드
 
-  private void uploadProfileImage(JLabel profileLabel) {
-    JFileChooser fileChooser = new JFileChooser();
-    int result = fileChooser.showOpenDialog(this);
+ private void uploadProfileImage(JLabel profileLabel) {
+   JFileChooser fileChooser = new JFileChooser();
+   int result = fileChooser.showOpenDialog(this);
 
-    if (result == JFileChooser.APPROVE_OPTION) {
-      java.io.File selectedFile = fileChooser.getSelectedFile();
+   if (result == JFileChooser.APPROVE_OPTION) {
+     java.io.File selectedFile = fileChooser.getSelectedFile();
 
-      File imageDir = new File("image");
-      if (!imageDir.exists()) {
-        imageDir.mkdirs(); // 디렉토리가 없으면 생성
-      }
+     File imageDir = new File("image");
+     if (!imageDir.exists()) {
+       imageDir.mkdirs(); // 디렉토리가 없으면 생성
+     }
 
-      String imageName = selectedFile.getName();
-      File targetFile = new File(imageDir, imageName);
+     // 🚀 [수정 포인트 1] 원본 파일명 대신, 'username + 확장자'로 이름을 변경합니다.
+     String originalName = selectedFile.getName(); // 예: cute_cat.png
+     String extension = "";
+     
+     int i = originalName.lastIndexOf('.');
+     if (i > 0) {
+         extension = originalName.substring(i); // 예: .png
+     }
+     
+     // 저장할 파일명: 유저이름 + 확장자 (예: user1.png)
+     String savedFileName = username + extension; 
+     
+     File targetFile = new File(imageDir, savedFileName);
 
-      try {
-        copyFile(selectedFile, targetFile);
+     try {
+       copyFile(selectedFile, targetFile); // 변경된 이름으로 파일 복사
 
-        ImageIcon originalIcon = new ImageIcon(targetFile.getAbsolutePath());
-        Image image = originalIcon.getImage();
-        Image newimg = image.getScaledInstance(50, 50, java.awt.Image.SCALE_SMOOTH);
-        ImageIcon newIcon = new ImageIcon(newimg);
+       // 이미지 로드 및 아이콘 설정
+       ImageIcon originalIcon = new ImageIcon(targetFile.getAbsolutePath());
+       Image image = originalIcon.getImage();
+       Image newimg = image.getScaledInstance(50, 50, java.awt.Image.SCALE_SMOOTH);
+       ImageIcon newIcon = new ImageIcon(newimg);
 
-        profileLabel.setIcon(newIcon);
-        profileLabel.setText("");
+       profileLabel.setIcon(newIcon);
+       profileLabel.setText("");
 
-        out.writeUTF("CHANGE_PROFILE_IMAGE:" + username + ":" + imageName);
-        out.flush();
+       // 🚀 [수정 포인트 2] 서버에도 변경된 파일 이름(user1.png)을 알려줍니다.
+       out.writeUTF("CHANGE_PROFILE_IMAGE:" + username + ":" + savedFileName);
+       out.flush();
 
-      } catch (IOException e) {
-        JOptionPane.showMessageDialog(this, "파일 복사 또는 서버 통보에 실패했습니다: " + e.getMessage(),
-            "오류", JOptionPane.ERROR_MESSAGE);
-      } catch (Exception ex) {
-        JOptionPane.showMessageDialog(this, "이미지 로드에 실패했습니다: " + ex.getMessage(),
-            "오류", JOptionPane.ERROR_MESSAGE);
-      }
-    }
-  }
+     } catch (IOException e) {
+       JOptionPane.showMessageDialog(this, "파일 복사 또는 서버 통보에 실패했습니다: " + e.getMessage(),
+           "오류", JOptionPane.ERROR_MESSAGE);
+     } catch (Exception ex) {
+       JOptionPane.showMessageDialog(this, "이미지 로드에 실패했습니다: " + ex.getMessage(),
+           "오류", JOptionPane.ERROR_MESSAGE);
+     }
+   }
+ }
   private void copyFile(File source, File dest) throws IOException {
     InputStream is = null;
     OutputStream os = null;

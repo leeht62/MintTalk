@@ -1,4 +1,3 @@
-// ChatCellRenderer.java (전체 코드)
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -7,6 +6,7 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Image;
 import java.awt.Insets;
+import java.io.File; // [필수] 파일 확인용 import
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -62,6 +62,7 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
     public Component getListCellRendererComponent(JList<? extends ChatMessage> list, ChatMessage message, int index,
             boolean isSelected, boolean cellHasFocus) {
         
+        // 패널 초기화
         pnlAlign.removeAll(); 
         pnlBubble.removeAll();
         pnlBubble.setLayout(new BorderLayout());
@@ -73,6 +74,7 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
         lblSender.setText(sender);
         txtMessage.setText(msgContent);
 
+        // 리스트 너비 처리
         int listWidth = list.getWidth();
         if (listWidth == 0) listWidth = 300; 
         int maxWidth = (int)(listWidth * 0.65);
@@ -121,8 +123,8 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
             txtMessage.setBackground(Color.WHITE); 
             txtMessage.setForeground(Color.BLACK);
             
-            // 🚀 프로필 이미지 로드 (FriendList 로직 응용)
-            // sender 이름을 넘기면 폴더에서 파일을 찾습니다.
+            // 🚀 프로필 이미지 로드
+            // message.getProfileImageName()에는 "sender 이름"이 들어있음
             lblProfile.setIcon(getProfileIcon(message.getProfileImageName()));
             
             JPanel pnlContent = new JPanel(new BorderLayout());
@@ -137,41 +139,37 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
         return this;
     }
     
-    // 🚀 [핵심] FriendList의 로직을 가져와서 강화한 메서드
-    // 유저 이름(name)을 받아서 image/ 폴더 안의 파일을 찾습니다.
+    // 🚀 [핵심] 이름(name)을 받아 image/ 폴더에서 파일을 찾는 메서드
     private ImageIcon getProfileIcon(String name) {
         if (name == null || name.isEmpty()) name = "profile.jpg";
         
-        // 1. 이름 자체가 파일명인 경우 (확장자 포함) 시도
-        ImageIcon icon = loadIcon("image/" + name);
-        if (icon != null) return icon;
+        // 1. 이름 자체가 파일명일 경우 (확장자가 이미 있는 경우)
+        File f = new File("image/" + name);
+        if(f.exists()) return loadIcon("image/" + name);
         
-        // 2. 이름에 확장자가 없는 경우, jpg/png 등을 붙여서 시도
+        // 2. 이름에 확장자가 없는 경우 -> .jpg, .png 등을 붙여서 찾음
         String[] exts = {".jpg", ".png", ".jpeg", ".gif"};
         for(String ext : exts) {
-            icon = loadIcon("image/" + name + ext);
-            if (icon != null) return icon;
+            File fExt = new File("image/" + name + ext);
+            if(fExt.exists()) {
+                return loadIcon("image/" + name + ext);
+            }
         }
 
         // 3. 다 실패하면 기본 이미지
-        icon = loadIcon("image/profile.jpg");
-        if (icon != null) return icon;
-        
-        return null; // 정말 아무것도 없으면 null
+        return loadIcon("image/profile.jpg");
     }
 
-    // 파일 경로로 이미지를 불러와서 40x40으로 줄여주는 헬퍼 메서드
+    // 파일 로드 및 리사이징 헬퍼
     private ImageIcon loadIcon(String path) {
         try {
             ImageIcon originalIcon = new ImageIcon(path);
             Image image = originalIcon.getImage();
-            if (image.getWidth(null) != -1) { // 이미지가 정상적으로 로드되었는지 확인
+            if (image.getWidth(null) != -1) {
                 Image newimg = image.getScaledInstance(40, 40, java.awt.Image.SCALE_SMOOTH);
                 return new ImageIcon(newimg);
             }
-        } catch (Exception e) {
-            // 로드 실패
-        }
+        } catch (Exception e) { }
         return null;
     }
 }
