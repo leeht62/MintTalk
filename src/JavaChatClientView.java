@@ -97,7 +97,7 @@ public class JavaChatClientView extends JFrame {
         contentPane.add(lblUserName);
         setVisible(true);
 
-        AppendMessage("System", "User " + username + " connecting...", false);
+//        AppendMessage("System", "User " + username + " connecting...", false);
         UserName = username;
         lblUserName.setText(username + ">");
 
@@ -178,11 +178,18 @@ public class JavaChatClientView extends JFrame {
               }
             }
             else if (msg.startsWith("ROOM_CREATED:") || msg.startsWith("USERLIST:")) {
-              continue;
-            }
-            else {
-              AppendMessage("System", msg, false);
-            }
+                continue;
+              }
+              
+              // 🚀 [추가] 서버에서 오는 "Welcome" 메시지(혹은 환영 메시지)를 필터링하여 무시합니다.
+              else if (msg.toLowerCase().contains("welcome")) {
+                  continue; // 해당 메시지를 무시하고 다음 루프로 넘어갑니다.
+              }
+              
+              else {
+                // 기타 시스템 메시지
+                AppendMessage("System", msg, false);
+              }
 
           } catch (IOException e) {
             AppendMessage("Error", "Connection lost", false);
@@ -226,8 +233,13 @@ public class JavaChatClientView extends JFrame {
     }
 
     // 채팅 메시지 추가 메서드 (JList용)
-    public void AppendMessage(String sender, String message, boolean isMine) {
-        ChatMessage chatMessage = new ChatMessage(sender, message, isMine);
+public void AppendMessage(String sender, String message, boolean isMine) {
+        
+        // 🚀 프로필 이미지 이름으로 'sender(유저이름)'를 그대로 넘깁니다.
+        // ChatCellRenderer가 "image/유저이름.jpg" 등을 자동으로 찾아줄 것입니다.
+        String profileName = sender; 
+        
+        ChatMessage chatMessage = new ChatMessage(sender, message, isMine, profileName);
         listModel.addElement(chatMessage);
 
         // 자동 스크롤
@@ -236,7 +248,6 @@ public class JavaChatClientView extends JFrame {
             chatList.ensureIndexIsVisible(lastIndex);
         }
     }
-
     // 서버로 메시지 전송
     public void SendMessage(String msg) {
         try {
