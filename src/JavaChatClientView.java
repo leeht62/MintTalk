@@ -93,7 +93,7 @@ public class JavaChatClientView extends JFrame {
         lblUserName.setBounds(12, 364, 67, 40);
         lblUserName.setOpaque(false);
         lblUserName.setForeground(Color.BLACK);
-        lblUserName.setFont(new Font("Tahoma", Font.BOLD, 14));
+        lblUserName.setFont(new Font("Malgun Gothic", Font.BOLD, 14));
         contentPane.add(lblUserName);
         setVisible(true);
 
