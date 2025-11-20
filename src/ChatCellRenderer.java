@@ -1,10 +1,10 @@
-// ChatCellRenderer.java
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension; // Dimension import 확인
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Insets;
+
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -13,87 +13,105 @@ import javax.swing.JTextArea;
 import javax.swing.ListCellRenderer;
 import javax.swing.SwingConstants;
 
-// JList의 각 항목(ChatMessage)을 '어떻게 그릴지' 정하는 클래스
 public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMessage> {
 
     private final JLabel lblSender = new JLabel();
     private final JTextArea txtMessage = new JTextArea();
-    private final JPanel pnlBubble = new JPanel(new BorderLayout()); // 말풍선 패널
-    private final JPanel pnlAlign = new JPanel(new BorderLayout()); // 좌우 정렬용 패널
+    private final JPanel pnlBubble = new JPanel(new BorderLayout()); 
+    private final JPanel pnlAlign = new JPanel(new BorderLayout()); 
 
     public ChatCellRenderer() {
-        super(new BorderLayout()); // 최종적으로 이 패널이 JList의 한 줄이 됨
+        super(new BorderLayout());
+        setOpaque(false); // 투명 배경
 
-        // 1. 보낸사람 라벨 설정
+        // 1. 보낸사람 라벨
         lblSender.setFont(new Font("Malgun Gothic", Font.BOLD, 12));
-        lblSender.setOpaque(false); // 배경 투명
+        lblSender.setOpaque(false);
 
-        // 2. 메시지 내용 (JTextArea는 자동 줄바꿈을 위해 사용)
+        // 2. 메시지 내용
         txtMessage.setFont(new Font("Malgun Gothic", Font.PLAIN, 14));
         txtMessage.setEditable(false);
-        txtMessage.setLineWrap(true);       // 자동 줄바꿈
-        txtMessage.setWrapStyleWord(true);  // 단어 단위 줄바꿈
-        txtMessage.setMargin(new Insets(8, 10, 8, 10)); // 말풍선 안쪽 여백
+        txtMessage.setLineWrap(true);       
+        txtMessage.setWrapStyleWord(true);  
+        txtMessage.setMargin(new Insets(8, 10, 8, 10));
 
-        // 3. 말풍선 패널 (메시지 내용을 감쌈)
+        // 3. 말풍선 패널
         pnlBubble.setOpaque(true);
         pnlBubble.add(txtMessage, BorderLayout.CENTER);
 
-        // 4. 정렬용 패널 (보낸사람 + 말풍선)
-        pnlAlign.setOpaque(false); // 배경 투명
-
-        // 5. 최종 패널에 정렬용 패널을 추가
+        // 4. 정렬 패널
+        pnlAlign.setOpaque(false);
         add(pnlAlign, BorderLayout.CENTER);
-        setOpaque(false); // 최종 패널 자체도 투명
-        setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); // 메시지 간 상하 여백
+        setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); 
     }
 
     @Override
     public Component getListCellRendererComponent(JList<? extends ChatMessage> list, ChatMessage message, int index,
             boolean isSelected, boolean cellHasFocus) {
         
-        // 1. 데이터 설정
-        lblSender.setText(message.getSender());
-        txtMessage.setText(message.getMessage());
-
-        // --- 2. 정렬 및 스타일링 (핵심) ---
+        // 초기화
+        pnlAlign.removeAll(); 
         
-        // 패널 초기화 (이전 설정 제거)
-        pnlAlign.remove(lblSender);
-        pnlAlign.remove(pnlBubble);
+        String sender = message.getSender();
+        String msgContent = message.getMessage();
+        
+        lblSender.setText(sender);
+        txtMessage.setText(msgContent);
 
-        if (message.isMine()) {
-            // [나] (오른쪽 정렬, 노란색 배경)
-            lblSender.setForeground(Color.black); // 배경에 따라 잘 보이게 설정 (배경이 어두우면 흰색 추천)
+        // 🚀 [수정 1] 리스트 너비가 0일 때(초기 로딩) 기본값(300)을 줘서 세로 국수 현상 방지
+        int listWidth = list.getWidth();
+        if (listWidth == 0) listWidth = 300; 
+
+        // 말풍선 최대 너비 설정 (리스트의 70%)
+        int maxWidth = (int)(listWidth * 0.7);
+        
+        // 🚀 [수정 2] JTextArea 크기 강제 계산 (이게 있어야 줄바꿈이 정상 작동)
+        txtMessage.setSize(new Dimension(maxWidth, Short.MAX_VALUE)); 
+        Dimension prefSize = txtMessage.getPreferredSize();
+        txtMessage.setSize(new Dimension(maxWidth, prefSize.height));
+
+        // --- 스타일링 및 정렬 로직 ---
+
+        if ("System".equals(sender)) {
+            // [CASE 1] 시스템 메시지 (가운데 정렬)
+            lblSender.setText(""); // 시스템은 이름 숨김 (내용만 표시)
+            
+            txtMessage.setBackground(new Color(200, 200, 200, 100)); // 연한 회색, 반투명
+            txtMessage.setForeground(Color.BLACK);
+            txtMessage.setFont(new Font("Malgun Gothic", Font.BOLD, 12)); // 약간 작게
+            
+            // 내용도 가운데 정렬처럼 보이게 트릭 (패널 자체를 가운데로)
+            JPanel pnlCenter = new JPanel();
+            pnlCenter.setOpaque(false);
+            pnlCenter.add(pnlBubble);
+            
+            pnlAlign.add(pnlCenter, BorderLayout.CENTER); // 중앙 배치
+            
+        } else if (message.isMine()) {
+            // [CASE 2] 나 (오른쪽 정렬)
+            lblSender.setForeground(Color.BLACK);
             lblSender.setHorizontalAlignment(SwingConstants.RIGHT);
             
             txtMessage.setBackground(new Color(207, 255, 229)); // 카톡 노란색
-            txtMessage.setForeground(Color.BLACK); // 글자 검은색
+            txtMessage.setForeground(Color.BLACK);
+            txtMessage.setFont(new Font("Malgun Gothic", Font.PLAIN, 14));
             
             pnlAlign.add(lblSender, BorderLayout.NORTH);
-            pnlAlign.add(pnlBubble, BorderLayout.EAST); // 말풍선을 동쪽에
+            pnlAlign.add(pnlBubble, BorderLayout.EAST); 
 
         } else {
-            // [상대방] (왼쪽 정렬, 흰색 배경)
-            lblSender.setForeground(Color.black); // 배경에 따라 잘 보이게 설정
+            // [CASE 3] 상대방 (왼쪽 정렬)
+            lblSender.setForeground(Color.BLACK);
             lblSender.setHorizontalAlignment(SwingConstants.LEFT);
 
-            txtMessage.setBackground(Color.WHITE); // 기본 흰색
-            txtMessage.setForeground(Color.BLACK); // 글자 검은색
+            txtMessage.setBackground(Color.WHITE); 
+            txtMessage.setForeground(Color.BLACK);
+            txtMessage.setFont(new Font("Malgun Gothic", Font.PLAIN, 14));
             
             pnlAlign.add(lblSender, BorderLayout.NORTH);
-            pnlAlign.add(pnlBubble, BorderLayout.WEST); // 말풍선을 서쪽에
-        }
-        
-        // JList 너비에 맞춰 JTextArea 크기 강제 조절 (자동 줄바꿈을 위함)
-        int listWidth = list.getWidth();
-        if (listWidth > 0) {
-            // 말풍선 최대 너비를 리스트의 70% 정도로 제한
-            int maxWidth = (int)(listWidth * 0.7);
-            txtMessage.setSize(new Dimension(maxWidth, 1)); 
+            pnlAlign.add(pnlBubble, BorderLayout.WEST); 
         }
 
-        return this; // 이 패널(this)을 JList의 한 줄로 반환
+        return this;
     }
-} 
-// 👆 여기에 닫는 괄호가 꼭 있어야 합니다!
+}
