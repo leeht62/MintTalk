@@ -1,27 +1,16 @@
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.Image;
-import java.awt.Insets;
-import java.io.File; // [필수] 파일 확인용 import
-
-import javax.swing.BorderFactory;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JPanel;
-import javax.swing.JTextArea;
+import java.awt.*;
+import java.io.File;
+import javax.swing.*;
 import javax.swing.ListCellRenderer;
-import javax.swing.SwingConstants;
 
 public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMessage> {
 
     private final JLabel lblSender = new JLabel();
     private final JTextArea txtMessage = new JTextArea();
-    private final JLabel lblProfile = new JLabel(); // 프로필 사진 라벨
+    private final JLabel lblProfile = new JLabel();
+    
+    // 🚀 [추가] 이미지를 보여줄 라벨
+    private final JLabel lblContentImage = new JLabel(); 
     
     private final JPanel pnlBubble = new JPanel(new BorderLayout()); 
     private final JPanel pnlAlign = new JPanel(new BorderLayout()); 
@@ -30,29 +19,31 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
         super(new BorderLayout());
         setOpaque(false);
 
-        // 1. 프로필 라벨 설정
+        // ... (lblProfile, lblSender 설정은 기존과 동일) ...
         lblProfile.setPreferredSize(new Dimension(40, 40)); 
         lblProfile.setHorizontalAlignment(SwingConstants.CENTER);
         lblProfile.setVerticalAlignment(SwingConstants.TOP);
         lblProfile.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10)); 
 
-        // 2. 보낸사람 이름
         lblSender.setFont(new Font("Malgun Gothic", Font.BOLD, 12));
         lblSender.setOpaque(false);
         lblSender.setBorder(BorderFactory.createEmptyBorder(0, 0, 2, 0)); 
 
-        // 3. 메시지 내용
+        // 텍스트 메시지 설정
         txtMessage.setFont(new Font("Malgun Gothic", Font.PLAIN, 14));
         txtMessage.setEditable(false);
         txtMessage.setLineWrap(true);       
         txtMessage.setWrapStyleWord(true);  
         txtMessage.setMargin(new Insets(8, 10, 8, 10));
+        
+        // 🚀 [추가] 이미지 메시지 설정
+        lblContentImage.setOpaque(true); // 배경색 적용을 위해 true
 
-        // 4. 말풍선 패널
+        // 말풍선 패널 초기화
         pnlBubble.setOpaque(true);
+        // 기본은 텍스트 추가
         pnlBubble.add(txtMessage, BorderLayout.CENTER);
 
-        // 5. 정렬 패널
         pnlAlign.setOpaque(false);
         add(pnlAlign, BorderLayout.CENTER);
         setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); 
@@ -62,69 +53,73 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
     public Component getListCellRendererComponent(JList<? extends ChatMessage> list, ChatMessage message, int index,
             boolean isSelected, boolean cellHasFocus) {
         
-        // 패널 초기화
         pnlAlign.removeAll(); 
-        pnlBubble.removeAll();
+        pnlBubble.removeAll(); // 내용 초기화
         pnlBubble.setLayout(new BorderLayout());
-        pnlBubble.add(txtMessage, BorderLayout.CENTER);
         
         String sender = message.getSender();
-        String msgContent = message.getMessage();
         
-        lblSender.setText(sender);
-        txtMessage.setText(msgContent);
+        // 🚀 [핵심] 텍스트냐 이미지냐에 따라 말풍선 내용 결정
+        if (message.isImage()) {
+            // 이미지일 경우
+            lblContentImage.setIcon(message.getContentImage());
+            pnlBubble.add(lblContentImage, BorderLayout.CENTER);
+        } else {
+            // 텍스트일 경우
+            txtMessage.setText(message.getMessage());
+            pnlBubble.add(txtMessage, BorderLayout.CENTER);
+        }
 
-        // 리스트 너비 처리
+        lblSender.setText(sender);
+
+        // 리스트 너비 설정
         int listWidth = list.getWidth();
         if (listWidth == 0) listWidth = 300; 
         int maxWidth = (int)(listWidth * 0.65);
         
-        txtMessage.setSize(new Dimension(maxWidth, Short.MAX_VALUE)); 
-        Dimension prefSize = txtMessage.getPreferredSize();
-        txtMessage.setSize(new Dimension(maxWidth, prefSize.height));
+        // 텍스트 크기 조정 (이미지는 크기 고정이므로 패스)
+        if (!message.isImage()) {
+            txtMessage.setSize(new Dimension(maxWidth, Short.MAX_VALUE)); 
+            Dimension prefSize = txtMessage.getPreferredSize();
+            txtMessage.setSize(new Dimension(maxWidth, prefSize.height));
+        }
 
-        // --- 정렬 로직 ---
-
+        // --- 정렬 로직 (배경색 등) ---
+        
+        Color bubbleColor;
+        
         if ("System".equals(sender)) {
-            // [System]
-            lblSender.setText("");
-            txtMessage.setBackground(new Color(200, 200, 200, 100));
-            txtMessage.setForeground(Color.BLACK);
-            txtMessage.setFont(new Font("Malgun Gothic", Font.BOLD, 12));
-            
-            pnlBubble.setLayout(new FlowLayout(FlowLayout.CENTER)); 
-            pnlBubble.add(txtMessage); 
-            
-            JPanel pnlCenter = new JPanel();
-            pnlCenter.setOpaque(false);
-            pnlCenter.add(pnlBubble);
-            pnlAlign.add(pnlCenter, BorderLayout.CENTER);
-            
+            // ... (시스템 메시지 처리 - 기존 동일) ...
+             lblSender.setText("");
+             txtMessage.setBackground(new Color(200, 200, 200, 100));
+             txtMessage.setText(message.getMessage()); // 시스템은 무조건 텍스트
+             pnlBubble.add(txtMessage);
+             
+             pnlBubble.setLayout(new FlowLayout(FlowLayout.CENTER));
+             
+             JPanel pnlCenter = new JPanel();
+             pnlCenter.setOpaque(false);
+             pnlCenter.add(pnlBubble);
+             pnlAlign.add(pnlCenter, BorderLayout.CENTER);
+             return this;
+
         } else if (message.isMine()) {
             // [나]
-            lblSender.setForeground(Color.BLACK);
+            bubbleColor = new Color(255, 235, 51); // 노란색
             lblSender.setHorizontalAlignment(SwingConstants.RIGHT);
-            
-            txtMessage.setBackground(new Color(255, 235, 51)); 
-            txtMessage.setForeground(Color.BLACK);
             
             JPanel pnlRight = new JPanel(new BorderLayout());
             pnlRight.setOpaque(false);
             pnlRight.add(lblSender, BorderLayout.NORTH);
             pnlRight.add(pnlBubble, BorderLayout.EAST);
-            
             pnlAlign.add(pnlRight, BorderLayout.EAST);
 
         } else {
             // [상대방]
-            lblSender.setForeground(Color.BLACK);
+            bubbleColor = Color.WHITE; // 흰색
             lblSender.setHorizontalAlignment(SwingConstants.LEFT);
-
-            txtMessage.setBackground(Color.WHITE); 
-            txtMessage.setForeground(Color.BLACK);
             
-            // 🚀 프로필 이미지 로드
-            // message.getProfileImageName()에는 "sender 이름"이 들어있음
+            // 프로필 이미지
             lblProfile.setIcon(getProfileIcon(message.getProfileImageName()));
             
             JPanel pnlContent = new JPanel(new BorderLayout());
@@ -136,31 +131,28 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
             pnlAlign.add(pnlContent, BorderLayout.CENTER);
         }
 
+        // 말풍선 색상 적용
+        if (message.isImage()) {
+            lblContentImage.setBackground(bubbleColor);
+        } else {
+            txtMessage.setBackground(bubbleColor);
+        }
+
         return this;
     }
     
-    // 🚀 [핵심] 이름(name)을 받아 image/ 폴더에서 파일을 찾는 메서드
+    // ... (getProfileIcon, loadIcon 등 기존 메서드 그대로 유지) ...
     private ImageIcon getProfileIcon(String name) {
         if (name == null || name.isEmpty()) name = "profile.jpg";
-        
-        // 1. 이름 자체가 파일명일 경우 (확장자가 이미 있는 경우)
         File f = new File("image/" + name);
         if(f.exists()) return loadIcon("image/" + name);
-        
-        // 2. 이름에 확장자가 없는 경우 -> .jpg, .png 등을 붙여서 찾음
         String[] exts = {".jpg", ".png", ".jpeg", ".gif"};
         for(String ext : exts) {
             File fExt = new File("image/" + name + ext);
-            if(fExt.exists()) {
-                return loadIcon("image/" + name + ext);
-            }
+            if(fExt.exists()) return loadIcon("image/" + name + ext);
         }
-
-        // 3. 다 실패하면 기본 이미지
         return loadIcon("image/profile.jpg");
     }
-
-    // 파일 로드 및 리사이징 헬퍼
     private ImageIcon loadIcon(String path) {
         try {
             ImageIcon originalIcon = new ImageIcon(path);
