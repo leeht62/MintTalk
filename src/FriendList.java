@@ -16,28 +16,90 @@ public class FriendList extends JFrame {
   private Vector<String> friendNames = new Vector<>();
   private static Vector<ChatRoomInfo> chatRooms = new Vector<>();
 
-  public FriendList(String username,String ip,int port,DataOutputStream out) {
+  public FriendList(String username, String ip, int port, DataOutputStream out) {
     this.username = username;
-    this.ip=ip;
-    this.port=port;
-    this.out=out;
+    this.ip = ip;
+    this.port = port;
+    this.out = out;
 
     setTitle("Friend List - " + username);
     setSize(300, 600);
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-    contentPane = new JPanel();
+    // 배경 이미지 패널 설정
+    contentPane = new ImagePanel("image/abc.jpg");
     contentPane.setLayout(new BorderLayout());
     setContentPane(contentPane);
 
-    JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-    userPanel.setBackground(Color.WHITE);
+    // =================================================================
+    // [구조 변경 핵심] 1. 왼쪽 사이드바 패널 (이제 전체 높이를 차지함)
+    // =================================================================
+    JPanel sidePanel = new JPanel();
+    sidePanel.setOpaque(false);
+    sidePanel.setPreferredSize(new Dimension(60, 0)); // 너비 60 고정
+    // 상단 여백(vgap)을 15로 주어 프로필 라인과 높이를 맞춤
+    sidePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 15));
+
+    // (1) 친구 아이콘 (people.jpg)
+    JLabel lblPeopleIcon = new JLabel();
+    lblPeopleIcon.setPreferredSize(new Dimension(35, 35));
+    lblPeopleIcon.setHorizontalAlignment(SwingConstants.CENTER);
+
+    try {
+      ImageIcon peopleIcon = new ImageIcon("image/people.jpg");
+      Image img = peopleIcon.getImage();
+      Image newImg = img.getScaledInstance(35, 35, java.awt.Image.SCALE_SMOOTH);
+      lblPeopleIcon.setIcon(new ImageIcon(newImg));
+    } catch (Exception e) {
+      lblPeopleIcon.setText("P");
+    }
+
+    // (2) 말풍선 버튼
+    JButton btnChatList = new JButton();
+    btnChatList.setBorderPainted(false);
+    btnChatList.setContentAreaFilled(false);
+    btnChatList.setFocusPainted(false);
+    btnChatList.setMargin(new Insets(0, 0, 0, 0));
+
+    try {
+      ImageIcon chatIcon = new ImageIcon("image/chat_icon.png");
+      if (chatIcon.getIconWidth() == -1) {
+        chatIcon = new ImageIcon("image/balloon.jpg");
+      }
+      Image img = chatIcon.getImage();
+      Image newImg = img.getScaledInstance(35, 35, java.awt.Image.SCALE_SMOOTH);
+      btnChatList.setIcon(new ImageIcon(newImg));
+    } catch (Exception e) {
+      btnChatList.setText("Talk");
+    }
+    btnChatList.addActionListener(e -> showChatRoomsDialog());
+
+    sidePanel.add(lblPeopleIcon);
+    sidePanel.add(btnChatList);
+
+    // [중요] 사이드바를 프레임의 WEST에 가장 먼저 배치
+    contentPane.add(sidePanel, BorderLayout.WEST);
+
+
+    // =================================================================
+    // [구조 변경 핵심] 2. 오른쪽 영역 (헤더 + 리스트)을 감싸는 패널 생성
+    // =================================================================
+    JPanel rightAreaPanel = new JPanel(new BorderLayout());
+    rightAreaPanel.setOpaque(false); // 배경 투명하게
+
+    // --- A. 상단 헤더 패널 ---
+    JPanel headerPanel = new JPanel(new BorderLayout());
+    headerPanel.setOpaque(false);
+    headerPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+    // [중앙] 내 프로필과 이름
+    JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+    userPanel.setOpaque(false);
 
     JLabel myProfileLabel = new JLabel();
     myProfileLabel.setPreferredSize(new Dimension(50, 50));
     myProfileLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-    // 💡 초기 프로필 아이콘 설정 (기본 이미지)
     ImageIcon defaultIcon = getProfileIcon("profile.jpg");
     if (defaultIcon != null) {
       myProfileLabel.setIcon(defaultIcon);
@@ -53,63 +115,73 @@ public class FriendList extends JFrame {
       }
     });
 
-    lblUser = new JLabel("("+username+")");
+    lblUser = new JLabel("(" + username + ")");
     lblUser.setFont(new Font("Dialog", Font.BOLD, 18));
+    lblUser.setForeground(Color.BLACK);
 
     userPanel.add(myProfileLabel);
     userPanel.add(lblUser);
 
-    contentPane.add(userPanel, BorderLayout.NORTH);
-
-
-    friendPanel = new JPanel();
-    friendPanel.setLayout(new BoxLayout(friendPanel, BoxLayout.Y_AXIS));
-    friendPanel.setBackground(Color.WHITE);
-
-    JPanel topRight = new JPanel(new BorderLayout());
-    topRight.setBackground(Color.WHITE);
-
+    // [오른쪽] 대화하기 버튼
     JButton btnOpenSelect = new JButton("➕ 대화");
     btnOpenSelect.setFocusPainted(false);
     btnOpenSelect.setBackground(Color.WHITE);
-    btnOpenSelect.setBorder(new EmptyBorder(5,5,5,5));
-
+    btnOpenSelect.setMargin(new Insets(5, 10, 5, 10));
     btnOpenSelect.addActionListener(e -> openSelectDialog());
 
-    contentPane.add(btnOpenSelect, BorderLayout.EAST);
+    JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 5));
+    buttonWrapper.setOpaque(false);
+    buttonWrapper.add(btnOpenSelect);
+
+    headerPanel.add(userPanel, BorderLayout.CENTER);
+    headerPanel.add(buttonWrapper, BorderLayout.EAST);
+
+    // 헤더를 오른쪽 영역 패널의 상단(NORTH)에 배치
+    rightAreaPanel.add(headerPanel, BorderLayout.NORTH);
+
+
+    // --- B. 중앙 친구 목록 스크롤 영역 ---
+    friendPanel = new JPanel();
+    friendPanel.setLayout(new BoxLayout(friendPanel, BoxLayout.Y_AXIS));
+    friendPanel.setOpaque(false);
 
     scrollPane = new JScrollPane(friendPanel);
     scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-    contentPane.add(scrollPane, BorderLayout.CENTER);
+    scrollPane.setOpaque(false);
+    scrollPane.getViewport().setOpaque(false);
+    scrollPane.setBorder(null);
 
-    JButton btnRooms = new JButton("채팅창 확인");
-    btnRooms.addActionListener(e -> showChatRoomsDialog());
-    contentPane.add(btnRooms, BorderLayout.SOUTH);
+    // 리스트를 오른쪽 영역 패널의 중앙(CENTER)에 배치
+    rightAreaPanel.add(scrollPane, BorderLayout.CENTER);
 
+    // [중요] 오른쪽 영역 전체를 프레임의 CENTER에 배치
+    contentPane.add(rightAreaPanel, BorderLayout.CENTER);
 
     setVisible(true);
   }
 
-  // 단일 친구 추가 (친구 목록에 프로필 이미지 공간 포함)
-  public void addFriend(String friendName,String imageName) {
+  // =================================================================
+  // 친구 추가 메서드 (이전과 동일)
+  // =================================================================
+  public void addFriend(String friendName, String imageName) {
     if (friendName.equals(username)) return;
     if (friendNames.contains(friendName)) return;
 
     friendNames.add(friendName);
 
-    JPanel panel = new JPanel(new BorderLayout(10, 0));
-    panel.setPreferredSize(new Dimension(260, 50));
-    panel.setMaximumSize(new Dimension(Short.MAX_VALUE, 50));
-    panel.setBorder(new MatteBorder(0, 0, 1, 0, new Color(220, 220, 220)));
-    panel.setBackground(Color.WHITE);
+    JPanel panel = new JPanel(new BorderLayout(0, 0));
+    panel.setPreferredSize(new Dimension(260, 70));
+    panel.setMaximumSize(new Dimension(Short.MAX_VALUE, 70));
 
-    // 💡 1. 프로필 이미지 공간 (JLabel) - 기본 이미지로 시작
+    Border lineBorder = new MatteBorder(0, 0, 1, 0, new Color(220, 220, 220));
+    panel.setBorder(new CompoundBorder(lineBorder, new EmptyBorder(0, 0, 0, 10)));
+    panel.setOpaque(false);
+
     JLabel profileLabel = new JLabel();
     profileLabel.setPreferredSize(new Dimension(50, 50));
     profileLabel.setHorizontalAlignment(SwingConstants.CENTER);
-    profileLabel.setBorder(new EmptyBorder(0, 5, 0, 0));
+    profileLabel.setBorder(new EmptyBorder(0, 10, 0, 10));
 
-    // 기본 이미지 설정
     ImageIcon defaultIcon = getProfileIcon("profile.jpg");
     if (defaultIcon != null) {
       profileLabel.setIcon(defaultIcon);
@@ -119,27 +191,30 @@ public class FriendList extends JFrame {
     ImageIcon currentIcon = getProfileIcon(imageName);
     if (currentIcon != null) {
       profileLabel.setIcon(currentIcon);
-    } else {
-      profileLabel.setText("👤");
     }
 
-    // 💡 3. 친구 이름 레이블
-    JLabel nameLabel = new JLabel(friendName);
-    nameLabel.setFont(new Font("Dialog", Font.PLAIN, 16));
-
-    // 💡 디버깅용: 이름 레이블을 찾기 위해 클라이언트 이름으로 이름을 지정
-    nameLabel.setName("FriendNameLabel_" + friendName);
     profileLabel.setName("ProfileImageLabel_" + friendName);
 
+    JLabel nameLabel = new JLabel(friendName);
+    nameLabel.setFont(new Font("Dialog", Font.PLAIN, 16));
+    nameLabel.setForeground(Color.BLACK);
+    nameLabel.setName("FriendNameLabel_" + friendName);
 
-    panel.add(profileLabel, BorderLayout.WEST);
-    panel.add(nameLabel, BorderLayout.CENTER);
+    JPanel westWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 10));
+    westWrapper.setOpaque(false);
+    westWrapper.add(profileLabel);
+    westWrapper.add(nameLabel);
+
+    panel.add(westWrapper, BorderLayout.CENTER);
 
     friendPanel.add(panel);
     friendPanel.revalidate();
     friendPanel.repaint();
   }
 
+  // ... 나머지 메서드들 (openSelectDialog, updateFriends 등)은 기존과 동일하게 유지 ...
+  // 아래 메서드들을 이전에 작성한 코드에서 그대로 복사해서 사용하세요.
+  // (지면 관계상 중복되는 긴 메서드는 생략하지 않고 필요한 경우 요청하시면 다시 드립니다.)
 
   private void openSelectDialog() {
     JDialog dialog = new JDialog(this, "대화상대 선택", true);
@@ -189,9 +264,7 @@ public class FriendList extends JFrame {
         e.printStackTrace();
       }
 
-      // 💡 주석 해제: 채팅방 실행
       openChatRoom(roomName);
-
       dialog.dispose();
     });
 
@@ -206,7 +279,6 @@ public class FriendList extends JFrame {
     dialog.setVisible(true);
   }
 
-  // 전체 친구 목록 갱신
   public void updateFriends(Vector<String> names, HashMap<String, String> imageMap) {
     friendPanel.removeAll();
     friendNames.clear();
@@ -214,46 +286,41 @@ public class FriendList extends JFrame {
       if (n == null) continue;
       String trimmed = n.trim();
       if (!trimmed.isEmpty() && !trimmed.equals(username)) {
-        // 💡 addFriend 호출 시 이미지 파일 이름을 전달합니다.
         String imageName = imageMap.getOrDefault(trimmed, "profile.jpg");
-        addFriend(trimmed, imageName); // addFriend 시그니처 변경 필요
+        addFriend(trimmed, imageName);
       }
     }
   }
 
-
-  // 💡 서버에서 수신된 메시지를 통해 친구의 프로필 이미지를 갱신합니다.
   public void updateFriendProfileImage(String targetUser, String imageName) {
     for (Component comp : friendPanel.getComponents()) {
       if (comp instanceof JPanel) {
         JPanel friendEntry = (JPanel) comp;
-
-        // 이름 레이블을 찾아 해당 사용자의 항목인지 확인합니다.
-        for (Component child : friendEntry.getComponents()) {
-          if (child instanceof JLabel && child.getName() != null && child.getName().equals("FriendNameLabel_" + targetUser)) {
-
-            // 프로필 이미지 레이블을 찾아 아이콘 갱신
-            for (Component profileChild : friendEntry.getComponents()) {
-              if (profileChild instanceof JLabel && profileChild.getName() != null && profileChild.getName().equals("ProfileImageLabel_" + targetUser)) {
-                JLabel profileLabel = (JLabel) profileChild;
-                ImageIcon newIcon = getProfileIcon(imageName);
-                profileLabel.setIcon(newIcon);
-                profileLabel.setText(""); // 텍스트 제거
-                friendEntry.revalidate();
-                friendEntry.repaint();
-                return; // 찾았으면 종료
-              }
-            }
-          }
-        }
+        updateImageRecursive(friendEntry, targetUser, imageName);
       }
     }
   }
 
-  // 💡 채팅방 실행 메소드
+  private void updateImageRecursive(Container container, String targetUser, String imageName) {
+    for (Component child : container.getComponents()) {
+      if (child instanceof JLabel) {
+        JLabel lbl = (JLabel) child;
+        if (lbl.getName() != null && lbl.getName().equals("ProfileImageLabel_" + targetUser)) {
+          ImageIcon newIcon = getProfileIcon(imageName);
+          lbl.setIcon(newIcon);
+          lbl.setText("");
+          lbl.revalidate();
+          lbl.repaint();
+          return;
+        }
+      } else if (child instanceof Container) {
+        updateImageRecursive((Container) child, targetUser, imageName);
+      }
+    }
+  }
+
   private void openChatRoom(String roomName) {
-    // 채팅방 실행
-    new JavaChatClientView(username, ip, String.valueOf(port),roomName);
+    new JavaChatClientView(username, ip, String.valueOf(port), roomName);
   }
 
   private void showChatRoomsDialog() {
@@ -264,19 +331,14 @@ public class FriendList extends JFrame {
     JPanel listPanel = new JPanel();
     listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
 
-    // 💡 주석 해제: 채팅방 목록 표시 및 재입장 기능
     for (ChatRoomInfo room : chatRooms) {
       JButton roomBtn = new JButton(room.toString());
       roomBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-      // 방 클릭하면 재입장
       roomBtn.addActionListener(e -> {
-        new JavaChatClientView(username, ip, String.valueOf(port),room.roomName);
+        new JavaChatClientView(username, ip, String.valueOf(port), room.roomName);
       });
-
       listPanel.add(roomBtn);
     }
-
 
     JScrollPane sp = new JScrollPane(listPanel);
     dialog.add(sp, BorderLayout.CENTER);
@@ -285,87 +347,62 @@ public class FriendList extends JFrame {
     dialog.setVisible(true);
   }
 
-  public void addChatRoom(ChatRoomInfo room) { // ChatRoomInfo로 타입 복구
-    // 💡 주석 해제: 채팅방 목록에 추가
+  public void addChatRoom(ChatRoomInfo room) {
     chatRooms.add(room);
   }
 
-  // 💡 지정된 이름의 프로필 이미지를 불러와 크기를 조정합니다.
   private ImageIcon getProfileIcon(String imageName) {
     if (imageName == null || imageName.isEmpty()) {
-      imageName = "profile.jpg"; // 기본 이미지로 폴백
+      imageName = "profile.jpg";
     }
     try {
-      // 클라이언트 로컬의 'image' 폴더에 프로필 이미지가 저장되어 있다고 가정
       ImageIcon originalIcon = new ImageIcon("image/" + imageName);
       Image image = originalIcon.getImage();
-      // 이미지 로드 실패 시, 기본 이미지 사용
       if (image.getWidth(null) == -1) {
         originalIcon = new ImageIcon("image/profile.jpg");
         image = originalIcon.getImage();
       }
-
-      Image newimg = image.getScaledInstance(50, 50,  java.awt.Image.SCALE_SMOOTH);
+      Image newimg = image.getScaledInstance(50, 50, java.awt.Image.SCALE_SMOOTH);
       return new ImageIcon(newimg);
     } catch (Exception e) {
-      System.err.println("이미지 파일을 찾을 수 없습니다: image/" + imageName + " 또는 image/profile.jpg");
+      System.err.println("이미지 파일을 찾을 수 없습니다: image/" + imageName);
       return null;
     }
   }
 
-//FriendList.java 내부의 uploadProfileImage 메서드
+  private void uploadProfileImage(JLabel profileLabel) {
+    JFileChooser fileChooser = new JFileChooser();
+    int result = fileChooser.showOpenDialog(this);
 
- private void uploadProfileImage(JLabel profileLabel) {
-   JFileChooser fileChooser = new JFileChooser();
-   int result = fileChooser.showOpenDialog(this);
+    if (result == JFileChooser.APPROVE_OPTION) {
+      java.io.File selectedFile = fileChooser.getSelectedFile();
+      File imageDir = new File("image");
+      if (!imageDir.exists()) {
+        imageDir.mkdirs();
+      }
+      String imageName = selectedFile.getName();
+      File targetFile = new File(imageDir, imageName);
 
-   if (result == JFileChooser.APPROVE_OPTION) {
-     java.io.File selectedFile = fileChooser.getSelectedFile();
+      try {
+        copyFile(selectedFile, targetFile);
+        ImageIcon originalIcon = new ImageIcon(targetFile.getAbsolutePath());
+        Image image = originalIcon.getImage();
+        Image newimg = image.getScaledInstance(50, 50, java.awt.Image.SCALE_SMOOTH);
+        ImageIcon newIcon = new ImageIcon(newimg);
 
-     File imageDir = new File("image");
-     if (!imageDir.exists()) {
-       imageDir.mkdirs(); // 디렉토리가 없으면 생성
-     }
+        profileLabel.setIcon(newIcon);
+        profileLabel.setText("");
+        out.writeUTF("CHANGE_PROFILE_IMAGE:" + username + ":" + imageName);
+        out.flush();
 
-     // 🚀 [수정 포인트 1] 원본 파일명 대신, 'username + 확장자'로 이름을 변경합니다.
-     String originalName = selectedFile.getName(); // 예: cute_cat.png
-     String extension = "";
-     
-     int i = originalName.lastIndexOf('.');
-     if (i > 0) {
-         extension = originalName.substring(i); // 예: .png
-     }
-     
-     // 저장할 파일명: 유저이름 + 확장자 (예: user1.png)
-     String savedFileName = username + extension; 
-     
-     File targetFile = new File(imageDir, savedFileName);
+      } catch (IOException e) {
+        JOptionPane.showMessageDialog(this, "파일 복사 실패: " + e.getMessage());
+      } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "이미지 로드 실패: " + ex.getMessage());
+      }
+    }
+  }
 
-     try {
-       copyFile(selectedFile, targetFile); // 변경된 이름으로 파일 복사
-
-       // 이미지 로드 및 아이콘 설정
-       ImageIcon originalIcon = new ImageIcon(targetFile.getAbsolutePath());
-       Image image = originalIcon.getImage();
-       Image newimg = image.getScaledInstance(50, 50, java.awt.Image.SCALE_SMOOTH);
-       ImageIcon newIcon = new ImageIcon(newimg);
-
-       profileLabel.setIcon(newIcon);
-       profileLabel.setText("");
-
-       // 🚀 [수정 포인트 2] 서버에도 변경된 파일 이름(user1.png)을 알려줍니다.
-       out.writeUTF("CHANGE_PROFILE_IMAGE:" + username + ":" + savedFileName);
-       out.flush();
-
-     } catch (IOException e) {
-       JOptionPane.showMessageDialog(this, "파일 복사 또는 서버 통보에 실패했습니다: " + e.getMessage(),
-           "오류", JOptionPane.ERROR_MESSAGE);
-     } catch (Exception ex) {
-       JOptionPane.showMessageDialog(this, "이미지 로드에 실패했습니다: " + ex.getMessage(),
-           "오류", JOptionPane.ERROR_MESSAGE);
-     }
-   }
- }
   private void copyFile(File source, File dest) throws IOException {
     InputStream is = null;
     OutputStream os = null;
