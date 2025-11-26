@@ -72,7 +72,10 @@ public class FriendList extends JFrame {
     } catch (Exception e) {
       btnChatList.setText("Talk");
     }
-    btnChatList.addActionListener(e -> showChatRoomsDialog());
+    btnChatList.addActionListener(e -> {
+      this.setVisible(false);
+      new ChatRoomList(username, ip, port, out, chatRooms, this);
+    });
 
     sidePanel.add(lblPeopleIcon);
     sidePanel.add(btnChatList);
@@ -199,6 +202,7 @@ public class FriendList extends JFrame {
     nameLabel.setFont(new Font("Dialog", Font.PLAIN, 16));
     nameLabel.setForeground(Color.BLACK);
     nameLabel.setName("FriendNameLabel_" + friendName);
+    nameLabel.setBorder(new EmptyBorder(0, 20, 0, 0));
 
     JPanel westWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 10));
     westWrapper.setOpaque(false);
@@ -323,29 +327,29 @@ public class FriendList extends JFrame {
     new JavaChatClientView(username, ip, String.valueOf(port), roomName);
   }
 
-  private void showChatRoomsDialog() {
-    JDialog dialog = new JDialog(this, "채팅방 목록", true);
-    dialog.setSize(300, 400);
-    dialog.setLayout(new BorderLayout());
-
-    JPanel listPanel = new JPanel();
-    listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
-
-    for (ChatRoomInfo room : chatRooms) {
-      JButton roomBtn = new JButton(room.toString());
-      roomBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-      roomBtn.addActionListener(e -> {
-        new JavaChatClientView(username, ip, String.valueOf(port), room.roomName);
-      });
-      listPanel.add(roomBtn);
-    }
-
-    JScrollPane sp = new JScrollPane(listPanel);
-    dialog.add(sp, BorderLayout.CENTER);
-
-    dialog.setLocationRelativeTo(this);
-    dialog.setVisible(true);
-  }
+//  private void showChatRoomsDialog() {
+//    JDialog dialog = new JDialog(this, "채팅방 목록", true);
+//    dialog.setSize(300, 400);
+//    dialog.setLayout(new BorderLayout());
+//
+//    JPanel listPanel = new JPanel();
+//    listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
+//
+//    for (ChatRoomInfo room : chatRooms) {
+//      JButton roomBtn = new JButton(room.toString());
+//      roomBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+//      roomBtn.addActionListener(e -> {
+//        new JavaChatClientView(username, ip, String.valueOf(port), room.roomName);
+//      });
+//      listPanel.add(roomBtn);
+//    }
+//
+//    JScrollPane sp = new JScrollPane(listPanel);
+//    dialog.add(sp, BorderLayout.CENTER);
+//
+//    dialog.setLocationRelativeTo(this);
+//    dialog.setVisible(true);
+//  }
 
   public void addChatRoom(ChatRoomInfo room) {
     chatRooms.add(room);
