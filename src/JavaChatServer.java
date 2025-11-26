@@ -18,7 +18,11 @@ public class JavaChatServer extends JFrame {
     private Vector<UserService> userVec = new Vector<>(); // 연결된 사용자
     private Vector<String> userList = new Vector<>();     // 접속자 이름
     private HashMap<String, ChatRoomInfo> chatRooms = new HashMap<>();
+
+    // [수정 1] 사용자 정보 저장소 (프로필, 배경, 상태메시지) 추가
     private HashMap<String, String> userProfileImages = new HashMap<>();
+    private HashMap<String, String> userBgImages = new HashMap<>();     // 배경 이미지 저장소
+    private HashMap<String, String> userStatusMsgs = new HashMap<>();   // 상태 메시지 저장소
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
@@ -120,6 +124,10 @@ public class JavaChatServer extends JFrame {
                     userVec.add(this);
                     if (!userList.contains(userName)) {
                         userList.add(userName);
+                        // [수정 2] 초기값 설정 (프로필, 배경, 상태메시지)
+                        if(!userProfileImages.containsKey(userName)) userProfileImages.put(userName, "profile.jpg");
+                        if(!userBgImages.containsKey(userName)) userBgImages.put(userName, "ab.jpg"); // 기본 배경
+                        if(!userStatusMsgs.containsKey(userName)) userStatusMsgs.put(userName, "");   // 기본 상태메시지 없음
                     }
 
                     writeOne("Welcome " + userName + "\n");
@@ -149,23 +157,30 @@ public class JavaChatServer extends JFrame {
             }
         }
 
-        // 모든 사용자에게 실시간 접속자 목록 전송
+        // [수정 3] 모든 사용자에게 실시간 접속자 목록 전송 (배경, 상태메시지 포함)
         private void sendUserListToAll() {
             String listMsg = "USERLIST:" + String.join(",", userList);
 
-            // 💡 프로필 이미지 정보를 JSON 또는 유사한 문자열 형태로 추가
+            // 데이터 형식: user1=프로필|배경|상태메시지;user2=...
             StringBuilder imageInfo = new StringBuilder();
             for (String user : userList) {
-                String image = JavaChatServer.this.userProfileImages.getOrDefault(user, "profile.jpg");
-                imageInfo.append(user).append("=").append(image).append(";");
+                String img = userProfileImages.getOrDefault(user, "profile.jpg");
+                String bg = userBgImages.getOrDefault(user, "ab.jpg");
+                String msg = userStatusMsgs.getOrDefault(user, "");
+
+                // 구분자 | 를 사용하여 3가지 정보를 묶음
+                imageInfo.append(user).append("=")
+                    .append(img).append("|")
+                    .append(bg).append("|")
+                    .append(msg).append(";");
             }
 
-            // 최종 메시지 포맷: USERLIST:user1,user2...:user1=image1.jpg;user2=image2.jpg;
+            // 최종 메시지 포맷: USERLIST:user1,user2...:user1=img|bg|msg;...
             String fullMsg = listMsg + ":" + imageInfo.toString();
 
             synchronized (userVec) {
                 for (UserService u : userVec) {
-                    u.writeOne(fullMsg); // \n 제거
+                    u.writeOne(fullMsg);
                 }
             }
         }
@@ -255,7 +270,7 @@ public class JavaChatServer extends JFrame {
                         String message = parts[2];
 
                         // 해당 방 멤버에게만 메시지 전송
-                        String formattedMsg = "[" + userName + "] " + message; // 방 이름은 클라이언트에서 필터링하므로 여기서 뺍니다.
+                        String formattedMsg = "[" + userName + "] " + message;
                         sendRoomMessage(roomName, formattedMsg);
 
                         continue;
@@ -270,19 +285,35 @@ public class JavaChatServer extends JFrame {
                         continue;
                     }
 
-                    // 💡 프로필 이미지 변경 메시지 수신 및 브로드캐스트
+                    // [수정 4] 프로필 이미지, 배경 이미지, 상태 메시지 변경 처리
                     if (msg.startsWith("CHANGE_PROFILE_IMAGE:")) {
                         String[] parts = msg.split(":");
                         if (parts.length >= 3) {
                             String targetUser = parts[1];
                             String imageName = parts[2];
-                            // 💡 서버에 사용자-이미지 정보 저장
-                            // 'userProfileImages'는 JavaChatServer의 멤버이므로, UserService 내부에서는 외부 참조 필요
                             JavaChatServer.this.userProfileImages.put(targetUser, imageName);
+                            sendUserListToAll(); // 변경 즉시 전파
                         }
-                        // CHANGE_PROFILE_IMAGE:username:imageName 형식의 메시지를 그대로 브로드캐스트합니다.
-                        broadcast(msg);
-                        appendText("[SERVER] Profile image change broadcasted: " + msg);
+                        continue;
+                    }
+                    else if (msg.startsWith("CHANGE_BG_IMAGE:")) {
+                        String[] parts = msg.split(":");
+                        if (parts.length >= 3) {
+                            String targetUser = parts[1];
+                            String imageName = parts[2];
+                            JavaChatServer.this.userBgImages.put(targetUser, imageName);
+                            sendUserListToAll(); // 변경 즉시 전파
+                        }
+                        continue;
+                    }
+                    else if (msg.startsWith("CHANGE_STATUS:")) {
+                        String[] parts = msg.split(":", 3); // 메시지 내에 :가 있을 수 있으므로 limit 3
+                        if (parts.length >= 3) {
+                            String targetUser = parts[1];
+                            String statusMsg = parts[2];
+                            JavaChatServer.this.userStatusMsgs.put(targetUser, statusMsg);
+                            sendUserListToAll(); // 변경 즉시 전파
+                        }
                         continue;
                     }
 
@@ -297,7 +328,6 @@ public class JavaChatServer extends JFrame {
             if (room == null) return;
 
             Vector<String> members = room.members;
-            // 💡 클라이언트가 현재 방과 메시지를 구분할 수 있도록 명확한 포맷 사용
             String msgToSend = "ROOM_MSG:" + roomName + ":" + msg;
             synchronized (userVec) {
                 for (UserService u : userVec) {

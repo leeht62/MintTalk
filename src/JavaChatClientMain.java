@@ -127,33 +127,32 @@ public class JavaChatClientMain extends JFrame {
       dos.writeUTF("/login " + username);
 
       // 친구 목록 창 생성
-      friendList = new FriendList(username, ip, port,dos);
+      friendList = new FriendList(username, ip, port, dos);
 
-      // 서버에서 USERLIST 수신 스레드
+      // 서버 수신 스레드
       new Thread(() -> {
         try {
           while (true) {
             String msg = dis.readUTF();
+
+            // [변경됨] USERLIST 처리 로직
             if (msg.startsWith("USERLIST:")) {
-              String[] parts = msg.substring(9).split(":"); // "user1,user2...:user1=image1.jpg;user2=image2.jpg;"
-              String[] names = parts[0].split(","); // user1,user2...
+              // msg 구조: "USERLIST:name1,name2:name1=img|bg|msg;name2=..."
+              // ":"로 3덩어리로만 나눕니다 (헤더, 이름목록, 상세정보)
+              String[] sections = msg.split(":", 3);
 
-              Vector<String> users = new Vector<>(Arrays.asList(names));
+              String namesPart = sections[1];
+              // 상세정보가 없을 수도 있으므로 체크
+              String detailsPart = (sections.length > 2) ? sections[2] : "";
 
-              // 💡 이미지 정보를 파싱합니다.
-              HashMap<String, String> imageMap = new HashMap<>();
-              if (parts.length > 1) {
-                String[] imageEntries = parts[1].split(";"); // user1=image1.jpg, user2=image2.jpg
-                for (String entry : imageEntries) {
-                  String[] kv = entry.split("=");
-                  if (kv.length == 2) {
-                    imageMap.put(kv[0], kv[1]);
-                  }
-                }
-              }
-              SwingUtilities.invokeLater(() -> friendList.updateFriends(users, imageMap)); // FriendList.updateFriends 메서드 수정 필요
+              Vector<String> users = new Vector<>(Arrays.asList(namesPart.split(",")));
+
+              // 이제 복잡하게 여기서 Map을 만들지 않고, 문자열(detailsPart)을 통째로 FriendList에 넘깁니다.
+              // FriendList.java에서 이 문자열을 해석하도록 수정했기 때문입니다.
+              SwingUtilities.invokeLater(() -> friendList.updateFriends(users, detailsPart));
             }
-            if (msg.startsWith("ROOM_CREATED:")) {
+
+            else if (msg.startsWith("ROOM_CREATED:")) {
               String[] parts = msg.split(":");
               String roomName = parts[1];
               Vector<String> members = new Vector<>(Arrays.asList(parts[2].split(",")));
@@ -162,27 +161,15 @@ public class JavaChatClientMain extends JFrame {
                 friendList.addChatRoom(room);
               });
             }
-            // 💡 프로필 이미지 변경 메시지 수신 및 FriendList 갱신 요청
-            if (msg.startsWith("CHANGE_PROFILE_IMAGE:")) {
-              String[] parts = msg.split(":");
-              if (parts.length >= 3) {
-                String targetUser = parts[1]; // 변경한 사용자 이름
-                String imageName = parts[2];  // 새 이미지 이름
 
-                // 자기 자신 외의 프로필 변경만 처리 (자신의 변경은 이미 로컬에서 적용됨)
-                if (!targetUser.equals(username)) {
-                  SwingUtilities.invokeLater(() -> {
-                    friendList.updateFriendProfileImage(targetUser, imageName);
-                  });
-                }
-              }
-            }
-            // 필요 시 일반 메시지 처리도 여기에 추가 가능
+            // 프로필 변경 메시지가 오면, 사실상 서버가 바로 USERLIST를 다시 보내주므로
+            // 여기서 별도 처리를 안 해도 되지만, 로그 용이나 특정 효과를 위해 남겨둘 수 있습니다.
+            // (USERLIST 로직이 최신 정보를 덮어쓰므로 여기선 패스해도 됩니다)
+
           }
         } catch (IOException e) {
           System.out.println("Disconnected from server.");
           SwingUtilities.invokeLater(() -> {
-            // friendList가 이미 닫혀 있을 수 있으므로 null 체크
             if(friendList != null) friendList.dispose();
             setVisible(true);
           });
