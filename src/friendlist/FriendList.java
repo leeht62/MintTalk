@@ -164,7 +164,6 @@ public class FriendList extends JFrame {
         friendPanel.setOpaque(false);
 
         scrollPane = new JScrollPane(friendPanel);
-        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.setBorder(null);
@@ -216,7 +215,7 @@ public class FriendList extends JFrame {
         friendPanel.repaint();
     }
 
-    // 🚀 [추가] 내 프로필 영역 및 전체 배경화면 새로고침
+    // 내 프로필 영역 및 전체 배경화면 새로고침
     private void refreshMyProfile() {
         // 1. 내 이미지 갱신
         String myImg = userImages.getOrDefault(username, "profile.jpg");
@@ -227,12 +226,6 @@ public class FriendList extends JFrame {
         String myMsg = userStatusMsgs.getOrDefault(username, "");
         if(lblMyStatus != null) lblMyStatus.setText(myMsg);
 
-        // 3. 전체 배경화면 갱신 (ImagePanel 캐스팅 필요)
-        String myBg = userBgImages.getOrDefault(username, "image/abc.jpg");
-        if (contentPane instanceof ImagePanel) {
-            ((ImagePanel) contentPane).setImagePath("image/" + myBg);
-            contentPane.repaint();
-        }
     }
 
     // addFriend: 친구 목록 UI 생성

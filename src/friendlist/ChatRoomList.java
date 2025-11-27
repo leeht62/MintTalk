@@ -36,7 +36,10 @@ public class ChatRoomList extends JFrame {
     this.mainFriendList = mainFriendList;
 
     setTitle("Chat Room List - " + username);
-    setSize(300, 600); // FriendList와 동일한 크기
+    setSize(300, 600);
+    if (mainFriendList != null) {
+      this.setLocation(mainFriendList.getLocation());
+    }
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
     // 1. 배경 설정 (FriendList와 동일)
