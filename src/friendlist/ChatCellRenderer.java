@@ -22,7 +22,7 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
         setOpaque(false);
 
         // ... (lblProfile, lblSender 설정은 기존과 동일) ...
-        lblProfile.setPreferredSize(new Dimension(40, 40)); 
+        lblProfile.setPreferredSize(new Dimension(60, 40)); 
         lblProfile.setHorizontalAlignment(SwingConstants.CENTER);
         lblProfile.setVerticalAlignment(SwingConstants.TOP);
         lblProfile.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10)); 

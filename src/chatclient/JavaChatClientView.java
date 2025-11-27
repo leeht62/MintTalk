@@ -19,7 +19,6 @@ import java.net.Socket;
 import java.util.Base64;
 
 public class JavaChatClientView extends JFrame {
-    // ... (기존 필드들)
     private JPanel contentPane;
     private RoundedTextField txtInput;
     private String UserName;
@@ -31,7 +30,6 @@ public class JavaChatClientView extends JFrame {
     private JList<ChatMessage> chatList;
     private DefaultListModel<ChatMessage> listModel;
     
-    // ... (Socket 관련 필드들 기존과 동일)
     private Socket socket;
     private InputStream is;
     private OutputStream os;
@@ -39,7 +37,8 @@ public class JavaChatClientView extends JFrame {
     private DataOutputStream dos;
     private JLabel lblUserName;
     private String currentRoomName;
-    private JLabel lblMembers;
+    
+    // [삭제됨] private JLabel lblMembers; // 더 이상 사용하지 않음
 
     public JavaChatClientView(String username, String ip_addr, String port_no, String roomName) {
         this.currentRoomName = roomName;
@@ -51,13 +50,13 @@ public class JavaChatClientView extends JFrame {
         setContentPane(contentPane);
         contentPane.setLayout(null);
 
-        // ... (lblMembers, scrollPane 등 기존 UI 설정 동일) ...
+        // [삭제됨] lblMembers 생성 및 추가 코드 제거
+        /*
         lblMembers = new JLabel("Members: Loading...");
         lblMembers.setBounds(12, 10, 352, 25);
-        lblMembers.setFont(new Font("Dialog", Font.BOLD, 14));
-        lblMembers.setOpaque(false);
-        lblMembers.setForeground(Color.BLACK);
+        ...
         contentPane.add(lblMembers);
+        */
 
         listModel = new DefaultListModel<>();
         chatList = new JList<>(listModel);
@@ -67,30 +66,35 @@ public class JavaChatClientView extends JFrame {
         chatList.setFocusable(false);
         
         JScrollPane scrollPane = new JScrollPane(chatList);
-        scrollPane.setBounds(12, 40, 352, 280);
+        
+        // 🚀 [수정] 채팅창 위치를 위로 올리고(Y:10), 높이를 키움(H:310)
+        scrollPane.setBounds(12, 10, 352, 310); 
+        
         scrollPane.setBorder(null);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.getVerticalScrollBar().setOpaque(false);
         contentPane.add(scrollPane);
 
-        // 🚀 [UI 수정] 입력창과 버튼 위치 조정 및 새 버튼 추가
+        // --- 하단 입력창 및 버튼 영역 ---
         
-     // 1. 사진 버튼 (+)
+        // 1. 사진 버튼 (+)
         btnImage = new RoundedButton("+");
         btnImage.setBounds(12, 364, 45, 40);
         btnImage.setFont(new Font("Malgun Gothic", Font.BOLD, 24));
-        btnImage.setMargin(new Insets(0, 0, 7, 0)); // [추가] 내부 여백 제거 (중요!)
+        btnImage.setMargin(new Insets(0, 0, 7, 0)); 
         btnImage.addActionListener(e -> sendImageAction()); 
         contentPane.add(btnImage);
 
+        // 2. 이모티콘 버튼 (😊)
         btnEmoticon = new RoundedButton("😊"); 
         btnEmoticon.setBounds(60, 364, 45, 40);
-        btnEmoticon.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20)); // [추가] 이모티콘 전용 폰트 추천 (없으면 Malgun Gothic)
-        btnEmoticon.setMargin(new Insets(7, 0, 0, 0)); // [추가] 내부 여백 제거 (중요!)
+        btnEmoticon.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20)); 
+        btnEmoticon.setMargin(new Insets(7, 0, 0, 0)); 
         btnEmoticon.addActionListener(e -> sendEmoticonAction()); 
         contentPane.add(btnEmoticon);
 
+        // 3. 입력창
         txtInput = new RoundedTextField();
         txtInput.setBounds(110, 365, 166, 40); 
         txtInput.setBackground(Color.WHITE);
@@ -106,13 +110,14 @@ public class JavaChatClientView extends JFrame {
         btnSend.setFont(new Font("Tahoma", Font.BOLD, 14));
         contentPane.add(btnSend);
 
-        // ... (나머지 초기화 코드 동일) ...
-        lblUserName = new JLabel("Name"); // 안보이지만 에러 방지용
+        lblUserName = new JLabel("Name"); 
         lblUserName.setBounds(0,0,0,0);
         contentPane.add(lblUserName);
         setVisible(true);
 
         UserName = username;
+        // 초기 타이틀 설정
+//        setTitle(currentRoomName);
 
         try {
             socket = new Socket(ip_addr, Integer.parseInt(port_no));
@@ -138,6 +143,7 @@ public class JavaChatClientView extends JFrame {
             AppendMessage("System", "Connect error", false, false, null);
         }
     }
+
     private void sendImageMessage(File file, int maxWidth) {
         try {
             BufferedImage image = ImageIO.read(file);
@@ -179,16 +185,17 @@ public class JavaChatClientView extends JFrame {
             ex.printStackTrace();
         }
     }
+
     private void sendImageAction() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileFilter(new FileNameExtensionFilter("Images", "jpg", "png", "gif"));
         
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
-            // 사진은 크게! (120px)
             sendImageMessage(file, 120); 
         }
     }
+
     private void sendEmoticonAction() {
         File emoDir = new File("image/emoticon");
         if (!emoDir.exists()) {
@@ -224,7 +231,6 @@ public class JavaChatClientView extends JFrame {
             btn.setBorder(BorderFactory.createLineBorder(new Color(220,220,220), 1));
             btn.setFocusPainted(false);
             
-            // 버튼 클릭 시
             btn.addActionListener(e -> {
                 sendImageMessage(f, 70); 
                 dialog.dispose();
@@ -233,7 +239,6 @@ public class JavaChatClientView extends JFrame {
             panel.add(btn);
         }
         
-        // ... (이하 스크롤팬, 닫기 버튼 등 기존 코드와 동일) ...
         JScrollPane scroll = new JScrollPane(panel);
         scroll.setBorder(null);
         dialog.add(scroll, BorderLayout.CENTER);
@@ -245,6 +250,7 @@ public class JavaChatClientView extends JFrame {
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
     }
+
     // 네트워크 수신 스레드
     class ListenNetwork extends Thread {
         public void run() {
@@ -253,14 +259,13 @@ public class JavaChatClientView extends JFrame {
                     String msg = dis.readUTF();
 
                     if (msg.startsWith("ROOM_MEMBERS:")) {
-                        // ... (기존 코드)
                          String[] parts = msg.split(":", 3);
                          if (parts.length >= 3) {
                              String receivedRoomName = parts[1];
                              String membersList = parts[2];
                              if (receivedRoomName.equals(currentRoomName)) {
-                                 lblMembers.setText("Members: " + membersList.replace(",", ", "));
-                                 AppendMessage("System", "현재 접속 인원: " + membersList.replace(",", ", "), false, false, null);
+                                 // 🚀 [수정] 라벨 대신 윈도우 타이틀에 표시
+                                 setTitle("참여자: " + membersList.replace(",", ", "));
                              }
                          }
                     } else if (msg.startsWith("ROOM_MSG:")) {
@@ -281,7 +286,6 @@ public class JavaChatClientView extends JFrame {
 
                                 boolean isMine = sender.equals(UserName);
                                 
-                                // 🚀 [확인] 이미지 메시지인지 체크
                                 if (message.startsWith("<<IMG>>")) {
                                     try {
                                         String base64 = message.substring(7); // "<<IMG>>" 제거
@@ -292,7 +296,6 @@ public class JavaChatClientView extends JFrame {
                                         AppendMessage(sender, "[이미지 깨짐]", isMine, false, null);
                                     }
                                 } else {
-                                    // 일반 텍스트
                                     AppendMessage(sender, message, isMine, false, null);
                                 }
                             }
@@ -332,7 +335,6 @@ public class JavaChatClientView extends JFrame {
 
     public void AppendMessage(String sender, String message, boolean isMine, boolean isImage, ImageIcon contentImage) {
         String profileName = sender;
-        // 수정된 ChatMessage 생성자 호출
         ChatMessage chatMessage = new ChatMessage(sender, message, isMine, profileName, isImage, contentImage);
         listModel.addElement(chatMessage);
 
