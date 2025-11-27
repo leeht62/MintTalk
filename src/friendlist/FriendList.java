@@ -1,9 +1,20 @@
-import java.awt.*;
-import java.awt.event.*;
+package friendlist;
+
+import chatclient.JavaChatClientView;
+import chat.ChatRoomInfo;
+import image.ImagePanel;
+
 import javax.swing.*;
-import javax.swing.border.*;
+import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.*;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Vector;
 
 public class FriendList extends JFrame {
   private JPanel contentPane;
@@ -18,7 +29,7 @@ public class FriendList extends JFrame {
   private Vector<String> friendNames = new Vector<>();
   private static Vector<ChatRoomInfo> chatRooms = new Vector<>();
 
-  // ★ 추가된 데이터 저장소 (상세창을 위해 필요)
+  // 추가된 데이터 저장소 (상세창을 위해 필요)
   private HashMap<String, String> userImages = new HashMap<>();
   private HashMap<String, String> userBgImages = new HashMap<>();
   private HashMap<String, String> userStatusMsgs = new HashMap<>();
@@ -43,20 +54,20 @@ public class FriendList extends JFrame {
     sidePanel.setPreferredSize(new Dimension(60, 0));
     sidePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 15));
 
-    // (1) 친구 아이콘
+    // 친구 아이콘
     JLabel lblPeopleIcon = new JLabel();
     lblPeopleIcon.setPreferredSize(new Dimension(35, 35));
     lblPeopleIcon.setHorizontalAlignment(SwingConstants.CENTER);
     try {
       ImageIcon peopleIcon = new ImageIcon("image/people.jpg");
       Image img = peopleIcon.getImage();
-      Image newImg = img.getScaledInstance(35, 35, java.awt.Image.SCALE_SMOOTH);
+      Image newImg = img.getScaledInstance(35, 35, Image.SCALE_SMOOTH);
       lblPeopleIcon.setIcon(new ImageIcon(newImg));
     } catch (Exception e) {
       lblPeopleIcon.setText("P");
     }
 
-    // (2) 말풍선 버튼
+    // 말풍선 버튼
     JButton btnChatList = new JButton();
     btnChatList.setBorderPainted(false);
     btnChatList.setContentAreaFilled(false);
@@ -66,7 +77,7 @@ public class FriendList extends JFrame {
       ImageIcon chatIcon = new ImageIcon("image/chat_icon.png");
       if (chatIcon.getIconWidth() == -1) chatIcon = new ImageIcon("image/balloon.jpg");
       Image img = chatIcon.getImage();
-      Image newImg = img.getScaledInstance(35, 35, java.awt.Image.SCALE_SMOOTH);
+      Image newImg = img.getScaledInstance(35, 35, Image.SCALE_SMOOTH);
       btnChatList.setIcon(new ImageIcon(newImg));
     } catch (Exception e) {
       btnChatList.setText("Talk");
@@ -83,12 +94,12 @@ public class FriendList extends JFrame {
     JPanel rightAreaPanel = new JPanel(new BorderLayout());
     rightAreaPanel.setOpaque(false);
 
-    // --- A. 상단 헤더 패널 ---
+    // 상단 헤더 패널
     JPanel headerPanel = new JPanel(new BorderLayout());
     headerPanel.setOpaque(false);
     headerPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-    // [중앙] 내 프로필과 이름
+    // 내 프로필과 이름
     JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
     userPanel.setOpaque(false);
 
@@ -101,7 +112,7 @@ public class FriendList extends JFrame {
     if (defaultIcon != null) myProfileLabel.setIcon(defaultIcon);
     else myProfileLabel.setText("👤");
 
-    // ★ [수정] 내 프로필 클릭 시 -> 상세창(ProfileDetailDialog) 오픈
+    //  내 프로필 클릭 시 ProfileDetailDialog오픈
     myProfileLabel.addMouseListener(new MouseAdapter() {
       public void mouseClicked(MouseEvent evt) {
         openProfileDetail(username);
@@ -115,7 +126,7 @@ public class FriendList extends JFrame {
     userPanel.add(myProfileLabel);
     userPanel.add(lblUser);
 
-    // [오른쪽] 대화하기 버튼
+    // 대화하기 버튼
     JButton btnOpenSelect = new JButton("➕ 대화");
     btnOpenSelect.setFocusPainted(false);
     btnOpenSelect.setBackground(Color.WHITE);
@@ -130,7 +141,7 @@ public class FriendList extends JFrame {
     headerPanel.add(buttonWrapper, BorderLayout.EAST);
     rightAreaPanel.add(headerPanel, BorderLayout.NORTH);
 
-    // --- B. 중앙 친구 목록 스크롤 영역 ---
+    // 중앙 친구 목록 스크롤 영역
     friendPanel = new JPanel();
     friendPanel.setLayout(new BoxLayout(friendPanel, BoxLayout.Y_AXIS));
     friendPanel.setOpaque(false);
@@ -147,12 +158,12 @@ public class FriendList extends JFrame {
     setVisible(true);
   }
 
-  // ★ [수정] updateFriends: 서버에서 받은 긴 문자열(detailInfo)을 파싱하여 저장
+  // updateFriends: 서버에서 받은 긴 문자열(detailInfo)을 파싱하여 저장
   public void updateFriends(Vector<String> names, String detailInfo) {
     friendPanel.removeAll();
     friendNames.clear();
 
-    // 1. 상세 정보 파싱 (이름=이미지|배경|상태메시지)
+    // 상세 정보 파싱 (이름=이미지|배경|상태메시지)
     if (detailInfo != null && !detailInfo.isEmpty()) {
       String[] users = detailInfo.split(";");
       for (String u : users) {
@@ -169,10 +180,10 @@ public class FriendList extends JFrame {
       }
     }
 
-    // 2. 내 프로필 이미지(헤더) 업데이트
+    //  내 프로필 이미지(헤더) 업데이트
     updateImageRecursive(contentPane, username, userImages.getOrDefault(username, "profile.jpg"));
 
-    // 3. 친구 목록 재생성
+    // 친구 목록 재생성
     for (String n : names) {
       if (n == null) continue;
       String trimmed = n.trim();
@@ -187,7 +198,7 @@ public class FriendList extends JFrame {
     friendPanel.repaint();
   }
 
-  // ★ [수정] addFriend: 친구 목록 UI 생성 (상태메시지 표시 및 클릭 이벤트 추가)
+  // addFriend: 친구 목록 UI 생성 (상태메시지 표시 및 클릭 이벤트 추가)
   public void addFriend(String friendName, String imageName) {
     friendNames.add(friendName);
 
@@ -210,7 +221,7 @@ public class FriendList extends JFrame {
     if (currentIcon != null) profileLabel.setIcon(currentIcon);
     else profileLabel.setText("👤");
 
-    // ★ 친구 이미지 클릭 시 -> 상세창 오픈
+    // 친구 이미지 클릭 시 -> 상세창 오픈
     profileLabel.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseClicked(MouseEvent e) {
@@ -247,7 +258,7 @@ public class FriendList extends JFrame {
     friendPanel.add(panel);
   }
 
-  // ★ [추가] 프로필 상세 창 열기 메서드
+  // 프로필 상세 창 열기 메서드
   private void openProfileDetail(String targetName) {
     String img = userImages.getOrDefault(targetName, "profile.jpg");
     String bg = userBgImages.getOrDefault(targetName, "ab.jpg");
@@ -350,7 +361,7 @@ public class FriendList extends JFrame {
         originalIcon = new ImageIcon("image/profile.jpg");
         image = originalIcon.getImage();
       }
-      Image newimg = image.getScaledInstance(50, 50, java.awt.Image.SCALE_SMOOTH);
+      Image newimg = image.getScaledInstance(50, 50, Image.SCALE_SMOOTH);
       return new ImageIcon(newimg);
     } catch (Exception e) {
       System.err.println("이미지 파일을 찾을 수 없습니다: image/" + imageName);

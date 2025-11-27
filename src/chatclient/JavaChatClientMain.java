@@ -1,10 +1,21 @@
-import java.awt.*;
-import java.awt.event.*;
+package chatclient;
+
+import chat.ChatRoomInfo;
+import friendlist.FriendList;
+import image.ImagePanel;
+import image.RoundedButton;
+import image.RoundedTextField;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.awt.*;
+import java.awt.event.ActionListener;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+import java.util.Arrays;
+import java.util.Vector;
 
 public class JavaChatClientMain extends JFrame {
 
@@ -137,18 +148,15 @@ public class JavaChatClientMain extends JFrame {
 
             // [변경됨] USERLIST 처리 로직
             if (msg.startsWith("USERLIST:")) {
-              // msg 구조: "USERLIST:name1,name2:name1=img|bg|msg;name2=..."
-              // ":"로 3덩어리로만 나눕니다 (헤더, 이름목록, 상세정보)
+
               String[] sections = msg.split(":", 3);
 
               String namesPart = sections[1];
-              // 상세정보가 없을 수도 있으므로 체크
+
               String detailsPart = (sections.length > 2) ? sections[2] : "";
 
               Vector<String> users = new Vector<>(Arrays.asList(namesPart.split(",")));
 
-              // 이제 복잡하게 여기서 Map을 만들지 않고, 문자열(detailsPart)을 통째로 FriendList에 넘깁니다.
-              // FriendList.java에서 이 문자열을 해석하도록 수정했기 때문입니다.
               SwingUtilities.invokeLater(() -> friendList.updateFriends(users, detailsPart));
             }
 
@@ -161,10 +169,6 @@ public class JavaChatClientMain extends JFrame {
                 friendList.addChatRoom(room);
               });
             }
-
-            // 프로필 변경 메시지가 오면, 사실상 서버가 바로 USERLIST를 다시 보내주므로
-            // 여기서 별도 처리를 안 해도 되지만, 로그 용이나 특정 효과를 위해 남겨둘 수 있습니다.
-            // (USERLIST 로직이 최신 정보를 덮어쓰므로 여기선 패스해도 됩니다)
 
           }
         } catch (IOException e) {

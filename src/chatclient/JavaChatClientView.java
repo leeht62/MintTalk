@@ -1,13 +1,22 @@
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import java.net.Socket;
-import java.util.Base64;
+package chatclient;
+
+import chat.ChatMessage;
+import friendlist.ChatCellRenderer;
+import image.ImagePanel;
+import image.RoundedButton;
+import image.RoundedTextField;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.net.Socket;
+import java.util.Base64;
 
 public class JavaChatClientView extends JFrame {
     // ... (기존 필드들)
@@ -15,8 +24,7 @@ public class JavaChatClientView extends JFrame {
     private RoundedTextField txtInput;
     private String UserName;
     private RoundedButton btnSend;
-    
-    // 🚀 [추가] 기능 버튼들
+
     private JButton btnImage; // 사진 전송 버튼
     private JButton btnEmoticon; // 이모티콘 버튼
     
@@ -75,9 +83,7 @@ public class JavaChatClientView extends JFrame {
         btnImage.setMargin(new Insets(0, 0, 7, 0)); // [추가] 내부 여백 제거 (중요!)
         btnImage.addActionListener(e -> sendImageAction()); 
         contentPane.add(btnImage);
-        
-        // 2. 이모티콘 버튼 (😊)
-        // "emoj"는 너무 길어서 ...이 뜰 수 있으니 "😊" 또는 "emo"로 변경하세요.
+
         btnEmoticon = new RoundedButton("😊"); 
         btnEmoticon.setBounds(60, 364, 45, 40);
         btnEmoticon.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20)); // [추가] 이모티콘 전용 폰트 추천 (없으면 Malgun Gothic)
@@ -85,9 +91,7 @@ public class JavaChatClientView extends JFrame {
         btnEmoticon.addActionListener(e -> sendEmoticonAction()); 
         contentPane.add(btnEmoticon);
 
-        // 3. 입력창 (위치 조정)
         txtInput = new RoundedTextField();
-        // 버튼들이 좁아 보이면 X좌표를 110에서 115 정도로 살짝 밀어도 됩니다.
         txtInput.setBounds(110, 365, 166, 40); 
         txtInput.setBackground(Color.WHITE);
         txtInput.setFont(new Font("Malgun Gothic", Font.PLAIN, 14));
@@ -134,10 +138,6 @@ public class JavaChatClientView extends JFrame {
             AppendMessage("System", "Connect error", false, false, null);
         }
     }
-
- // 🚀 [수정] 이미지 크기 축소 + 투명 배경(PNG) 지원 메서드
- // 🚀 [수정] 이미지 전송 메서드 (원하는 크기를 지정할 수 있음)
-    // 매개변수에 int maxWidth 추가됨
     private void sendImageMessage(File file, int maxWidth) {
         try {
             BufferedImage image = ImageIO.read(file);
@@ -149,7 +149,6 @@ public class JavaChatClientView extends JFrame {
             String fileName = file.getName().toLowerCase();
             boolean isPng = fileName.endsWith(".png");
 
-            // 🚀 [핵심] 받아온 maxWidth 값으로 리사이징
             int newWidth = maxWidth; 
             int newHeight = (int)(image.getHeight() * ((double)newWidth / image.getWidth()));
             
@@ -180,7 +179,6 @@ public class JavaChatClientView extends JFrame {
             ex.printStackTrace();
         }
     }
- // 🚀 [기능 1] 사진 전송 액션 (+ 버튼)
     private void sendImageAction() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileFilter(new FileNameExtensionFilter("Images", "jpg", "png", "gif"));
@@ -191,7 +189,6 @@ public class JavaChatClientView extends JFrame {
             sendImageMessage(file, 120); 
         }
     }
- // 🚀 [기능 2] 이모티콘 전송 액션 (😊 버튼)
     private void sendEmoticonAction() {
         File emoDir = new File("image/emoticon");
         if (!emoDir.exists()) {
@@ -219,7 +216,6 @@ public class JavaChatClientView extends JFrame {
         panel.setBackground(Color.WHITE);
 
         for (File f : files) {
-            // 미리보기 아이콘 생성
             ImageIcon icon = new ImageIcon(f.getAbsolutePath());
             Image img = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
             
@@ -230,7 +226,6 @@ public class JavaChatClientView extends JFrame {
             
             // 버튼 클릭 시
             btn.addActionListener(e -> {
-                // 이모티콘은 작게! (70px)
                 sendImageMessage(f, 70); 
                 dialog.dispose();
             });
@@ -335,7 +330,6 @@ public class JavaChatClientView extends JFrame {
         }
     }
 
-    // 🚀 [수정] AppendMessage: 이미지 지원
     public void AppendMessage(String sender, String message, boolean isMine, boolean isImage, ImageIcon contentImage) {
         String profileName = sender;
         // 수정된 ChatMessage 생성자 호출

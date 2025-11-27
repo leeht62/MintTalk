@@ -1,9 +1,8 @@
-// RoundedTextField.java
-import javax.swing.JTextField;
+package image;// RoundedTextField.java
+
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
 /**

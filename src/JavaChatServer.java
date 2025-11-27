@@ -1,3 +1,5 @@
+import chat.ChatRoomInfo;
+
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -157,7 +159,7 @@ public class JavaChatServer extends JFrame {
             }
         }
 
-        // [수정 3] 모든 사용자에게 실시간 접속자 목록 전송 (배경, 상태메시지 포함)
+        // 모든 사용자에게 실시간 접속자 목록 전송 (배경, 상태메시지 포함)
         private void sendUserListToAll() {
             String listMsg = "USERLIST:" + String.join(",", userList);
 
@@ -285,7 +287,7 @@ public class JavaChatServer extends JFrame {
                         continue;
                     }
 
-                    // [수정 4] 프로필 이미지, 배경 이미지, 상태 메시지 변경 처리
+                    // 프로필 이미지, 배경 이미지, 상태 메시지 변경 처리
                     if (msg.startsWith("CHANGE_PROFILE_IMAGE:")) {
                         String[] parts = msg.split(":");
                         if (parts.length >= 3) {

@@ -1,7 +1,9 @@
+package friendlist;
+
+import chat.ChatMessage;
+import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-import javax.swing.*;
-import javax.swing.ListCellRenderer;
 
 public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMessage> {
 
@@ -51,7 +53,7 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
 
     @Override
     public Component getListCellRendererComponent(JList<? extends ChatMessage> list, ChatMessage message, int index,
-            boolean isSelected, boolean cellHasFocus) {
+                                                  boolean isSelected, boolean cellHasFocus) {
         
         pnlAlign.removeAll(); 
         pnlBubble.removeAll(); // 내용 초기화
@@ -158,7 +160,7 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
             ImageIcon originalIcon = new ImageIcon(path);
             Image image = originalIcon.getImage();
             if (image.getWidth(null) != -1) {
-                Image newimg = image.getScaledInstance(40, 40, java.awt.Image.SCALE_SMOOTH);
+                Image newimg = image.getScaledInstance(40, 40, Image.SCALE_SMOOTH);
                 return new ImageIcon(newimg);
             }
         } catch (Exception e) { }

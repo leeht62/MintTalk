@@ -1,9 +1,16 @@
-import java.awt.*;
-import java.awt.event.*;
+package friendlist;
+
+import chat.ChatRoomInfo;
+import chatclient.JavaChatClientView;
+import image.ImagePanel;
+
 import javax.swing.*;
-import javax.swing.border.*;
-import java.io.*;
-import java.util.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
+import java.awt.*;
+import java.io.DataOutputStream;
+import java.util.Vector;
 
 public class ChatRoomList extends JFrame {
   private JPanel contentPane;
@@ -98,13 +105,11 @@ public class ChatRoomList extends JFrame {
     rightAreaPanel.add(scrollPane, BorderLayout.CENTER);
     contentPane.add(rightAreaPanel, BorderLayout.CENTER);
 
-    // 초기 데이터 로드
     loadChatRooms();
 
     setVisible(true);
   }
 
-  // 채팅방 목록을 화면에 추가하는 메서드
   private void loadChatRooms() {
     roomListPanel.removeAll();
 
@@ -118,7 +123,6 @@ public class ChatRoomList extends JFrame {
     roomListPanel.repaint();
   }
 
-  // 개별 채팅방 아이템(패널) 생성
   private void addRoomItem(ChatRoomInfo room) {
     JPanel panel = new JPanel(new BorderLayout());
     panel.setPreferredSize(new Dimension(220, 60)); // 높이 60
@@ -129,19 +133,16 @@ public class ChatRoomList extends JFrame {
         new EmptyBorder(5, 5, 5, 5)
     ));
 
-    // 1. 방 이름 (왼쪽)
     JLabel nameLabel = new JLabel(room.roomName); // roomName 필드 사용 가정
     nameLabel.setFont(new Font("Dialog", Font.PLAIN, 15));
     nameLabel.setForeground(Color.BLACK);
     nameLabel.setBorder(new EmptyBorder(0, 10, 0, 0)); // 왼쪽 여백
 
-    // 2. 입장 버튼 (오른쪽)
     JButton btnEnter = new JButton("입장");
     btnEnter.setFont(new Font("Dialog", Font.PLAIN, 12));
     btnEnter.setBackground(Color.WHITE);
     btnEnter.setFocusPainted(false);
     btnEnter.addActionListener(e -> {
-      // 채팅방 입장 (기존 로직 사용)
       new JavaChatClientView(username, ip, String.valueOf(port), room.roomName);
     });
 
@@ -151,7 +152,6 @@ public class ChatRoomList extends JFrame {
     roomListPanel.add(panel);
   }
 
-  // 아이콘 설정 헬퍼 메서드 (버튼용)
   private void setSidebarIcon(JButton btn, String path, String altText) {
     try {
       ImageIcon icon = new ImageIcon(path);
@@ -162,7 +162,6 @@ public class ChatRoomList extends JFrame {
     }
   }
 
-  // 아이콘 설정 헬퍼 메서드 (라벨용)
   private void setSidebarIconLabel(JLabel lbl, String path1, String path2, String altText) {
     try {
       ImageIcon icon = new ImageIcon(path1);

@@ -1,12 +1,12 @@
-import javax.swing.ImageIcon;
+package chat;
+
+import javax.swing.*;
 
 public class ChatMessage {
     private String sender;
     private String message;
     private boolean isMine;
     private String profileImageName;
-    
-    // 🚀 [추가] 이미지 전송을 위한 필드
     private boolean isImage; 
     private ImageIcon contentImage; 
 
@@ -23,8 +23,7 @@ public class ChatMessage {
     public String getMessage() { return message; }
     public boolean isMine() { return isMine; }
     public String getProfileImageName() { return profileImageName; }
-    
-    // 🚀 [추가] Getter
+
     public boolean isImage() { return isImage; }
     public ImageIcon getContentImage() { return contentImage; }
 }
