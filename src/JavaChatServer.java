@@ -237,6 +237,14 @@ public class JavaChatServer extends JFrame {
                         continue;
                     }
 
+                    if (msg.startsWith("HEALTH_SEND:")) {
+                        // 받은 메시지: HEALTH_SEND:홍길동:운동|식단|계획
+                        // 보낼 메시지: HEALTH_BROADCAST:홍길동:운동|식단|계획
+                        String broadcastMsg = msg.replace("HEALTH_SEND:", "HEALTH_BROADCAST:");
+                        broadcast(broadcastMsg); // 모든 접속자에게 전송
+                        continue;
+                    }
+
                     if (msg.startsWith("MAKE_ROOM:")) {
                         try {
                             String[] parts = msg.split(":");

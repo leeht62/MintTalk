@@ -169,6 +169,19 @@ public class JavaChatClientMain extends JFrame {
                 friendList.addChatRoom(room);
               });
             }
+            else if (msg.startsWith("DRAWING:") || msg.startsWith("GAME_CHAT:") ||
+                msg.startsWith("GAME_CLEAR:") || msg.startsWith("GAME_ROLE:") ||
+                msg.startsWith("GAME_WORD:") ||
+                msg.startsWith("OMOK_PUT:") || msg.startsWith("OMOK_RESET") ||
+                msg.startsWith("OMOK_WIN:") || msg.startsWith("OMOK_MSG:") ||
+                msg.startsWith("HEALTH_BROADCAST:")) { // <-- 여기 추가됨
+
+              // 게임 및 헬스케어 메시지 분기 처리
+              if (msg.startsWith("HEALTH_BROADCAST:")) {
+                friendList.handleHealthCommand(msg);
+              }
+            }
+
 
           }
         } catch (IOException e) {

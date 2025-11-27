@@ -24,11 +24,14 @@ public class FriendList extends JFrame {
     private String ip;
     private int port;
     private DataOutputStream out;
+    private HealthCare healthWindow = null;
+
 
     // UI 컴포넌트 멤버 변수화 (갱신을 위해)
     private JLabel myProfileLabel;
     private JLabel lblUser;
     private JLabel lblMyStatus; // 내 상태메시지 표시용
+
 
     private Vector<String> friendNames = new Vector<>();
     private static Vector<ChatRoomInfo> chatRooms = new Vector<>();
@@ -92,8 +95,31 @@ public class FriendList extends JFrame {
             new ChatRoomList(username, ip, port, out, chatRooms, this);
         });
 
+
+        JButton btnHealth = new JButton();
+        btnHealth.setBorderPainted(false);
+        btnHealth.setContentAreaFilled(false);
+        btnHealth.setFocusPainted(false);
+        btnHealth.setMargin(new Insets(0, 0, 0, 0));
+        try {
+            ImageIcon healthIcon = new ImageIcon("image/health.jpg"); // 아이콘 이미지
+            Image img = healthIcon.getImage();
+            Image newImg = img.getScaledInstance(35, 35, Image.SCALE_SMOOTH);
+            btnHealth.setIcon(new ImageIcon(newImg));
+        } catch (Exception e) {
+            btnHealth.setText("Health"); // 이미지 없으면 텍스트
+        }
+        btnHealth.addActionListener(e -> {
+            if (healthWindow == null || !healthWindow.isVisible()) {
+                healthWindow = new HealthCare(username, out, this);
+            } else {
+                healthWindow.toFront();
+            }
+        });
+
         sidePanel.add(lblPeopleIcon);
         sidePanel.add(btnChatList);
+        sidePanel.add(btnHealth);   // [추가] 헬스케어
         contentPane.add(sidePanel, BorderLayout.WEST);
 
         // --- [오른쪽 메인 영역] ---
@@ -172,6 +198,12 @@ public class FriendList extends JFrame {
         contentPane.add(rightAreaPanel, BorderLayout.CENTER);
 
         setVisible(true);
+    }
+
+    public void handleHealthCommand(String msg) {
+        if (healthWindow != null && healthWindow.isVisible()) {
+            healthWindow.processMessage(msg);
+        }
     }
 
     // 🚀 [핵심 수정] updateFriends: 서버 정보를 받아 맵을 갱신하고 화면을 다시 그립니다.
