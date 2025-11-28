@@ -145,14 +145,38 @@ public class ChatCellRenderer extends JPanel implements ListCellRenderer<ChatMes
     
     // ... (getProfileIcon, loadIcon 등 기존 메서드 그대로 유지) ...
     private ImageIcon getProfileIcon(String name) {
-        if (name == null || name.isEmpty()) name = "profile.jpg";
+        // 1. 넘어온 이름 확인
+        System.out.println("=================================");
+        System.out.println("[디버깅] 요청된 이미지 이름: " + name);
+
+        if (name == null || name.isEmpty()) {
+            System.out.println("[디버깅] 이름이 없어서 기본 이미지로 설정함");
+            name = "profile.jpg";
+        }
+
+        // 2. 파일 찾기 시도
         File f = new File("image/" + name);
-        if(f.exists()) return loadIcon("image/" + name);
+        
+        // 3. 컴퓨터가 실제로 찾고 있는 '절대 경로' 출력 (여기가 핵심!)
+        System.out.println("[디버깅] 컴퓨터가 찾는 위치: " + f.getAbsolutePath());
+        System.out.println("[디버깅] 파일 존재 여부: " + f.exists());
+
+        if(f.exists()) {
+            System.out.println("[성공] 파일을 찾았습니다!");
+            return loadIcon("image/" + name);
+        }
+
+        // 4. 확장자 바꿔서 찾아보기
         String[] exts = {".jpg", ".png", ".jpeg", ".gif"};
         for(String ext : exts) {
             File fExt = new File("image/" + name + ext);
-            if(fExt.exists()) return loadIcon("image/" + name + ext);
+            if(fExt.exists()) {
+                System.out.println("[성공] 확장자 붙여서 찾음: " + fExt.getName());
+                return loadIcon("image/" + name + ext);
+            }
         }
+
+        System.out.println("[실패] 파일을 못 찾아서 기본 이미지(profile.jpg)를 띄웁니다.");
         return loadIcon("image/profile.jpg");
     }
     private ImageIcon loadIcon(String path) {

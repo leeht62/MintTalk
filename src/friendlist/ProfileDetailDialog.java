@@ -145,34 +145,78 @@ public class ProfileDetailDialog extends JDialog {
   }
 
   private void uploadImage(boolean isBg) {
-    JFileChooser fileChooser = new JFileChooser();
-    if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-      File selectedFile = fileChooser.getSelectedFile();
-      File imageDir = new File("image");
-      if (!imageDir.exists()) imageDir.mkdirs();
+	    System.out.println("============== [이미지 업로드 시작] ==============");
+	    
+	    JFileChooser fileChooser = new JFileChooser();
+	    if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+	        
+	        // 1. 선택한 파일 확인
+	        File selectedFile = fileChooser.getSelectedFile();
+	        System.out.println("[1] 사용자가 선택한 파일: " + selectedFile.getAbsolutePath());
 
-      String fileName = selectedFile.getName();
-      File targetFile = new File(imageDir, fileName);
+	        // 2. 저장할 폴더 확인
+	        String projectPath = System.getProperty("user.dir");
+	        File imageDir = new File(projectPath, "image");
+	        
+	        System.out.println("[2] 저장될 폴더 위치: " + imageDir.getAbsolutePath());
 
-      try {
-        // 파일 복사
-        copyFile(selectedFile, targetFile);
+	        if (!imageDir.exists()) {
+	            System.out.println("[알림] image 폴더가 없어서 새로 만듭니다.");
+	            imageDir.mkdirs();
+	        }
 
-        // 서버 전송 프로토콜 결정
-        String protocol = isBg ? "CHANGE_BG_IMAGE" : "CHANGE_PROFILE_IMAGE";
-        out.writeUTF(protocol + ":" + username + ":" + fileName);
-        out.flush();
+	        // 🚀 [핵심 변경] 원본 이름 대신 '아이디'로 파일명 만들기
+	        String originalName = selectedFile.getName();
+	        String extension = "";
+	        
+	        // 확장자(.jpg, .png)만 추출하기
+	        int dotIndex = originalName.lastIndexOf('.');
+	        if (dotIndex >= 0) {
+	            extension = originalName.substring(dotIndex); 
+	        } else {
+	            extension = ".jpg"; // 확장자가 없으면 강제로 .jpg 붙임
+	        }
 
-        // 즉시 UI 반영
-        if (isBg) updateImage(lblBgImg, fileName, 350, 500, "ab.jpg");
-        else updateImage(lblProfileImg, fileName, 90, 90, "profile.jpg");
+	        // 최종 파일명 결정 (중요!)
+	        // 프로필이면 "아이디.jpg", 배경이면 "아이디_bg.jpg"로 저장 (서로 안 덮어쓰게)
+	        String fileName;
+	        if (isBg) {
+	            fileName = username + "_bg" + extension; 
+	        } else {
+	            fileName = username + extension; // 여기가 원하시던 "ioi.jpg" 부분!
+	        }
 
-      } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "이미지 변경 실패: " + e.getMessage());
-      }
-    }
-  }
+	        // 3. 타겟 파일 설정
+	        File targetFile = new File(imageDir, fileName);
+	        System.out.println("[3] 최종 저장될 경로(이름 변경됨): " + targetFile.getAbsolutePath());
 
+	        try {
+	            // 4. 복사 실행
+	            System.out.println("[4] 파일 복사를 시도합니다...");
+	            copyFile(selectedFile, targetFile);
+	            System.out.println("[성공] 파일 복사 완료! 파일 존재 확인 -> " + targetFile.exists());
+
+	            // 5. 서버 전송
+	            String protocol = isBg ? "CHANGE_BG_IMAGE" : "CHANGE_PROFILE_IMAGE";
+	            System.out.println("[5] 서버로 변경 요청 전송: " + protocol + ":" + username + ":" + fileName);
+	            
+	            out.writeUTF(protocol + ":" + username + ":" + fileName);
+	            out.flush();
+
+	            // 6. 내 화면 즉시 갱신
+	            if (isBg) updateImage(lblBgImg, fileName, 350, 500, "ab.jpg");
+	            else updateImage(lblProfileImg, fileName, 90, 90, "profile.jpg");
+
+	        } catch (Exception e) {
+	            System.err.println("!!!!!!!!!! [에러 발생] !!!!!!!!!!!");
+	            e.printStackTrace();
+	            JOptionPane.showMessageDialog(this, "실패: " + e.getMessage());
+	        }
+	    } else {
+	        System.out.println("[취소] 사용자가 파일 선택을 취소했습니다.");
+	    }
+	    System.out.println("===============================================");
+	}
   private void copyFile(File source, File dest) throws IOException {
     try (InputStream is = new FileInputStream(source);
          OutputStream os = new FileOutputStream(dest)) {

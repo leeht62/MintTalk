@@ -214,29 +214,49 @@ public class JavaChatServer extends JFrame {
                     }
 
                     // 귓속말 처리: /to username message
+                 // JavaChatServer.java -> run() 메서드 내부
+
+                 // [JavaChatServer.java] run() 메서드 내부 수정
+
                     if (msg.startsWith("/to ")) {
+                        System.out.println("[서버] 귓속말 요청: " + msg);
+                        
                         String[] parts = msg.split(" ", 3);
                         if (parts.length >= 3) {
-                            String target = parts[1];
+                            String targetUser = parts[1];
                             String privateMsg = parts[2];
+                            
                             boolean found = false;
+
                             synchronized (userVec) {
                                 for (UserService u : userVec) {
-                                    if (u.userName.equals(target)) {
-                                        u.writeOne("[귓속말][" + userName + "] " + privateMsg);
-                                        writeOne("[귓속말][" + userName + "] " + privateMsg);
+                                    // 🚀 [핵심 수정] 이름이 같으면 무조건 보낸다! (break 삭제)
+                                    if (u.userName.equals(targetUser)) {
+                                        u.writeOne("WHISPER:" + userName + ":" + privateMsg);
                                         found = true;
-                                        break;
+                                        // 여기서 break; 를 하시면 안 됩니다!!
+                                        // 그래야 친구목록에도, 채팅방 1에도, 채팅방 2에도 다 전송됩니다.
                                     }
                                 }
                             }
-                            if (!found) writeOne("사용자 " + target + "를 찾을 수 없습니다.");
+                            
+                            // 보낸 나에게도 확인 메시지 전송 (내 채팅방들에 다 뿌리기)
+                            if (found) {
+                                synchronized (userVec) {
+                                    for (UserService u : userVec) {
+                                        if (u.userName.equals(userName)) { // 나(userName)의 모든 연결 찾기
+                                            u.writeOne("WHISPER_SENT:" + targetUser + ":" + privateMsg);
+                                        }
+                                    }
+                                }
+                            } else {
+                                writeOne("WHISPER_FAIL:" + targetUser);
+                            }
                         } else {
-                            writeOne("사용법: /to [username] [message]");
+                            writeOne("[시스템] 사용법: /to [상대방이름] [메시지]");
                         }
                         continue;
                     }
-
                     if (msg.startsWith("HEALTH_SEND:")) {
                         // 받은 메시지: HEALTH_SEND:홍길동:운동|식단|계획
                         // 보낼 메시지: HEALTH_BROADCAST:홍길동:운동|식단|계획

@@ -64,6 +64,58 @@ public class JavaChatClientView extends JFrame {
         chatList.setOpaque(false);
         chatList.setBackground(new Color(0, 0, 0, 0));
         chatList.setFocusable(false);
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem whisperItem = new JMenuItem("귓속말 보내기");
+        popupMenu.add(whisperItem);
+
+        // 2. 리스트에 마우스 리스너 추가
+        chatList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                handleMouseClick(e);
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                handleMouseClick(e);
+            }
+
+            private void handleMouseClick(java.awt.event.MouseEvent e) {
+                // 우클릭인지 확인
+                if (e.isPopupTrigger() || SwingUtilities.isRightMouseButton(e)) {
+                    
+                    // 클릭한 위치가 리스트의 몇 번째 항목인지 확인
+                    int index = chatList.locationToIndex(e.getPoint());
+                    
+                    if (index != -1 && chatList.getCellBounds(index, index).contains(e.getPoint())) {
+                        // 해당 항목 선택 (시각적 효과)
+                        chatList.setSelectedIndex(index);
+                        
+                        // 클릭한 메시지 정보 가져오기
+                        ChatMessage clickedMsg = chatList.getModel().getElementAt(index);
+                        String targetUser = clickedMsg.getSender();
+                        
+                        // 나 자신이나 시스템 메시지에는 귓속말 불가
+                        if (!targetUser.equals(username) && !targetUser.equals("System") && !targetUser.equals("Unknown")) {
+                            
+                            // 기존 리스너 제거 (중복 방지)
+                            for (ActionListener al : whisperItem.getActionListeners()) {
+                                whisperItem.removeActionListener(al);
+                            }
+                            
+                            // 클릭 시 동작: 입력창에 "/to 이름 " 자동 입력
+                            whisperItem.addActionListener(event -> {
+                                txtInput.setText("/to " + targetUser + " ");
+                                txtInput.requestFocus(); // 바로 입력할 수 있게 포커스 이동
+                            });
+                            
+                            // 팝업 메뉴 띄우기
+                            popupMenu.show(e.getComponent(), e.getX(), e.getY());
+                        }
+                    }
+                }
+            }
+        });
         
         JScrollPane scrollPane = new JScrollPane(chatList);
         
@@ -103,6 +155,7 @@ public class JavaChatClientView extends JFrame {
         txtInput.setColumns(10);
 
         // 4. 전송 버튼
+     // 4. 전송 버튼
         btnSend = new RoundedButton("Send");
         btnSend.setBounds(288, 364, 76, 40);
         btnSend.setBackground(new Color(0, 150, 136));
@@ -110,14 +163,22 @@ public class JavaChatClientView extends JFrame {
         btnSend.setFont(new Font("Tahoma", Font.BOLD, 14));
         contentPane.add(btnSend);
 
-        lblUserName = new JLabel("Name"); 
-        lblUserName.setBounds(0,0,0,0);
+        // 🚀 [수정] 사용자 이름 라벨 설정 (입력창 바로 위에 배치)
+        // x=115 (입력창과 줄맞춤), y=340 (채팅창과 입력창 사이 빈 공간)
+        lblUserName = new JLabel(username); 
+        lblUserName.setBounds(115, 342, 150, 20); 
+        lblUserName.setOpaque(false);
+        lblUserName.setForeground(Color.DARK_GRAY); // 잘 보이게 진한 회색
+        lblUserName.setFont(new Font("Malgun Gothic", Font.BOLD, 12)); // 폰트 설정
+        lblUserName.setHorizontalAlignment(SwingConstants.LEFT); // 왼쪽 정렬
         contentPane.add(lblUserName);
+        
         setVisible(true);
 
         UserName = username;
-        // 초기 타이틀 설정
-//        setTitle(currentRoomName);
+        
+        // 🚀 [수정] 텍스트 설정 ( > 화살표 추가)
+        lblUserName.setText(username);
 
         try {
             socket = new Socket(ip_addr, Integer.parseInt(port_no));
@@ -252,62 +313,125 @@ public class JavaChatClientView extends JFrame {
     }
 
     // 네트워크 수신 스레드
-    class ListenNetwork extends Thread {
+ // JavaChatClientView.java -> ListenNetwork 클래스 내부
+
+     class ListenNetwork extends Thread {
         public void run() {
             while (true) {
                 try {
                     String msg = dis.readUTF();
 
-                    if (msg.startsWith("ROOM_MEMBERS:")) {
-                         String[] parts = msg.split(":", 3);
-                         if (parts.length >= 3) {
-                             String receivedRoomName = parts[1];
-                             String membersList = parts[2];
-                             if (receivedRoomName.equals(currentRoomName)) {
-                                 // 🚀 [수정] 라벨 대신 윈도우 타이틀에 표시
-                                 setTitle("참여자: " + membersList.replace(",", ", "));
-                             }
-                         }
-                    } else if (msg.startsWith("ROOM_MSG:")) {
+                    // ---------------------------------------------------------
+                    // 1. 귓속말 처리 (상대방이 나에게 보냄)
+                    // ---------------------------------------------------------
+                    if (msg.startsWith("WHISPER:")) {
+                        // 서버가 보낸 형식: WHISPER:보낸사람:내용
+                        String[] parts = msg.split(":", 3);
+                        if (parts.length >= 3) {
+                            String sender = parts[1];
+                            String content = parts[2];
+                            
+                            // 화면에 표시 (왼쪽, 흰색 말풍선)
+                            AppendMessage(sender, "[귓속말] " + content, false, false, null);
+                        }
+                    }
+                    
+                    // ---------------------------------------------------------
+                    // 2. 귓속말 보낸 확인 (내가 보낸 거)
+                    // ---------------------------------------------------------
+                    else if (msg.startsWith("WHISPER_SENT:")) {
+                        // 서버가 보낸 형식: WHISPER_SENT:받는사람:내용
+                        String[] parts = msg.split(":", 3);
+                        if (parts.length >= 3) {
+                            String target = parts[1];
+                            String content = parts[2];
+                            
+                            // 화면에 표시 (오른쪽, 노란 말풍선)
+                            // 내 이름(UserName)을 넣어서 '나'인 것을 인식시킴
+                            AppendMessage(UserName, "[귓속말][" + target + "에게] " + content, true, false, null);
+                        }
+                    }
+                    
+                    // ---------------------------------------------------------
+                    // 3. 귓속말 실패 알림
+                    // ---------------------------------------------------------
+                    else if (msg.startsWith("WHISPER_FAIL:")) {
+                        String target = msg.split(":")[1];
+                        AppendMessage("System", "'" + target + "'님은 접속 중이 아닙니다.", false, false, null);
+                    }
+
+                    // ---------------------------------------------------------
+                    // 4. 일반 채팅방 메시지
+                    // ---------------------------------------------------------
+                    else if (msg.startsWith("ROOM_MSG:")) {
                         String[] parts = msg.split(":", 3);
                         if (parts.length >= 3) {
                             String receivedRoomName = parts[1];
                             String actualMsg = parts[2];
 
+                            // 현재 내가 보고 있는 방의 메시지만 표시
                             if (receivedRoomName.equals(currentRoomName)) {
                                 String sender = "Unknown";
                                 String message = actualMsg;
 
+                                // 이름 파싱 (서버 형식에 따라 유연하게 대처)
                                 if (actualMsg.startsWith("[") && actualMsg.contains("]")) {
-                                    int endOfSender = actualMsg.indexOf("]");
-                                    sender = actualMsg.substring(1, endOfSender).trim();
-                                    message = actualMsg.substring(endOfSender + 1).trim();
+                                    int endBracket = actualMsg.indexOf("]");
+                                    sender = actualMsg.substring(1, endBracket).trim();
+                                    message = actualMsg.substring(endBracket + 1).trim();
+                                } else if (actualMsg.contains(":")) {
+                                    int colonIndex = actualMsg.indexOf(":");
+                                    if (!actualMsg.startsWith("<<IMG>>")) { // 이미지가 아닐 때만
+                                        sender = actualMsg.substring(0, colonIndex).trim();
+                                        message = actualMsg.substring(colonIndex + 1).trim();
+                                    }
                                 }
 
                                 boolean isMine = sender.equals(UserName);
-                                
+
+                                // 이미지인지 텍스트인지 확인 후 출력
                                 if (message.startsWith("<<IMG>>")) {
                                     try {
-                                        String base64 = message.substring(7); // "<<IMG>>" 제거
+                                        String base64 = message.substring(7);
                                         byte[] imageBytes = Base64.getDecoder().decode(base64);
                                         ImageIcon icon = new ImageIcon(imageBytes);
                                         AppendMessage(sender, "", isMine, true, icon);
                                     } catch (Exception e) {
-                                        AppendMessage(sender, "[이미지 깨짐]", isMine, false, null);
+                                        AppendMessage(sender, "[이미지 에러]", isMine, false, null);
                                     }
                                 } else {
                                     AppendMessage(sender, message, isMine, false, null);
                                 }
                             }
                         }
-                    } else if (msg.startsWith("ROOM_CREATED:") || msg.startsWith("USERLIST:") || msg.toLowerCase().contains("welcome")) {
-                        continue;
+                    }
+                    
+                    // ---------------------------------------------------------
+                    // 5. 방 제목(참여자) 업데이트
+                    // ---------------------------------------------------------
+                    else if (msg.startsWith("ROOM_MEMBERS:")) {
+                        String[] parts = msg.split(":", 3);
+                        if (parts.length >= 3) {
+                            String receivedRoomName = parts[1];
+                            String membersList = parts[2];
+                            if (receivedRoomName.equals(currentRoomName)) {
+                                setTitle("참여자: " + membersList.replace(",", ", "));
+                            }
+                        }
+                    }
+                    
+                    // ---------------------------------------------------------
+                    // 6. 기타 시스템 메시지 (입장, 퇴장 등)
+                    // ---------------------------------------------------------
+                    else if (msg.startsWith("ROOM_CREATED:") || msg.startsWith("USERLIST:") || msg.toLowerCase().contains("welcome")) {
+                        continue; // 그냥 무시
                     } else {
+                        // 그 외 알 수 없는 메시지는 시스템 메시지로 출력
                         AppendMessage("System", msg, false, false, null);
                     }
 
                 } catch (IOException e) {
-                    AppendMessage("Error", "Connection lost", false, false, null);
+                    AppendMessage("System", "서버와의 연결이 끊어졌습니다.", false, false, null);
                     break;
                 }
             }
@@ -320,11 +444,16 @@ public class JavaChatClientView extends JFrame {
             if (e.getSource() == btnSend || e.getSource() == txtInput) {
                 String inputMsg = txtInput.getText().trim();
                 if (inputMsg.isEmpty()) return;
-
-                if (!currentRoomName.isEmpty()) {
+                
+                if (inputMsg.startsWith("/to ")) {
+                    SendMessage(inputMsg);
+                }
+                
+                else if (!currentRoomName.isEmpty()) {
                     String msgToSend = "SEND_ROOM_MSG:" + currentRoomName + ":" + inputMsg;
                     SendMessage(msgToSend);
-                } else {
+                } 
+                else {
                     SendMessage(inputMsg);
                 }
                 txtInput.setText("");
