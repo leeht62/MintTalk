@@ -1,4 +1,4 @@
-package image;// RoundedButton.java
+package image;
 
 import javax.swing.*;
 import java.awt.*;
@@ -27,13 +27,13 @@ public class RoundedButton extends JButton {
 
     // 버튼 상태에 따른 배경색 설정
     if (getModel().isPressed()) {
-      // 버튼이 눌렸을 때 (기존 배경색보다 조금 어둡게)
+      // 버튼이 눌렸을 때
       g2.setColor(getBackground().darker());
     } else if (getModel().isRollover()) {
-      // 마우스가 올라갔을 때 (기존 배경색보다 조금 밝게)
+      // 마우스가 올라갔을 때
       g2.setColor(getBackground().brighter());
     } else {
-      // 평상시 (설정된 배경색)
+      // 평상시
       g2.setColor(getBackground());
     }
 

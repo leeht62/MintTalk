@@ -1,4 +1,4 @@
-package image;// RoundedTextField.java
+package image;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -10,15 +10,12 @@ import java.awt.geom.RoundRectangle2D;
  */
 public class RoundedTextField extends JTextField {
 
-  // 모서리의 둥근 정도 (숫자가 클수록 더 둥글어짐)
   private int cornerRadius = 15;
 
   public RoundedTextField() {
     super();
-    setOpaque(false); // 배경은 우리가 직접 그릴 것이므로
+    setOpaque(false);
 
-    // 텍스트가 둥근 모서리에 닿지 않도록 안쪽 여백(padding)을 줌
-    // (위: 5, 왼쪽: 10, 아래: 5, 오른쪽: 10)
     setBorder(new EmptyBorder(5, 10, 5, 10));
   }
 

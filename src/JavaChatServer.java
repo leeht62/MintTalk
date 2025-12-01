@@ -1,13 +1,16 @@
 import chat.ChatRoomInfo;
 
-import java.awt.EventQueue;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.*;
-import java.net.*;
-import java.util.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import java.awt.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Arrays;
+import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class JavaChatServer extends JFrame {
 
@@ -17,14 +20,16 @@ public class JavaChatServer extends JFrame {
     private JTextField txtPortNumber;
 
     private ServerSocket serverSocket;
-    private Vector<UserService> userVec = new Vector<>(); // 연결된 사용자
-    private Vector<String> userList = new Vector<>();     // 접속자 이름
-    private HashMap<String, ChatRoomInfo> chatRooms = new HashMap<>();
+    
+    // Thread-Safe한 리스트와 맵 사용
+    private final Vector<UserService> userVec = new Vector<>(); 
+    private final Vector<String> userList = new Vector<>();
+    private final ConcurrentHashMap<String, ChatRoomInfo> chatRooms = new ConcurrentHashMap<>();
 
-    // [수정 1] 사용자 정보 저장소 (프로필, 배경, 상태메시지) 추가
-    private HashMap<String, String> userProfileImages = new HashMap<>();
-    private HashMap<String, String> userBgImages = new HashMap<>();     // 배경 이미지 저장소
-    private HashMap<String, String> userStatusMsgs = new HashMap<>();   // 상태 메시지 저장소
+    // 사용자 프로필 정보 저장소 (동시성 제어를 위해 ConcurrentHashMap 권장)
+    private final ConcurrentHashMap<String, String> userProfileImages = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> userBgImages = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> userStatusMsgs = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
@@ -66,34 +71,40 @@ public class JavaChatServer extends JFrame {
         btnStart.setBounds(12, 300, 300, 35);
         contentPane.add(btnStart);
 
-        btnStart.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    serverSocket = new ServerSocket(Integer.parseInt(txtPortNumber.getText()));
-                    appendText("Chat Server Running on port " + txtPortNumber.getText());
-                    btnStart.setEnabled(false);
-                    txtPortNumber.setEnabled(false);
-                    new AcceptServer().start(); // 접속자 수락 스레드
-                } catch (Exception ex) {
-                    appendText("Server start error: " + ex.getMessage());
-                }
+        // 서버 시작 버튼 액션
+        btnStart.addActionListener(e -> {
+            try {
+                int port = Integer.parseInt(txtPortNumber.getText());
+                serverSocket = new ServerSocket(port);
+                appendText("Chat Server Running on port " + port);
+                
+                btnStart.setEnabled(false);
+                txtPortNumber.setEnabled(false);
+                
+                new AcceptServer().start(); // 클라이언트 접속 대기 스레드 시작
+            } catch (Exception ex) {
+                appendText("Server start error: " + ex.getMessage());
             }
         });
     }
 
+    // 서버 로그 출력용
     private void appendText(String msg) {
-        textArea.append(msg + "\n");
-        textArea.setCaretPosition(textArea.getText().length());
+        SwingUtilities.invokeLater(() -> {
+            textArea.append(msg + "\n");
+            textArea.setCaretPosition(textArea.getText().length());
+        });
     }
 
-    //접속 스레드
+    // --- Inner Class: 클라이언트 접속 수락 스레드 ---
     class AcceptServer extends Thread {
         public void run() {
             while (true) {
                 try {
                     appendText("Waiting for clients...");
                     Socket clientSocket = serverSocket.accept();
-                    appendText("New client connected: " + clientSocket);
+                    appendText("New client connected: " + clientSocket.getInetAddress());
+                    
                     UserService user = new UserService(clientSocket);
                     user.start();
                 } catch (IOException e) {
@@ -104,7 +115,7 @@ public class JavaChatServer extends JFrame {
         }
     }
 
-    //클라이언트 스레드
+    // --- Inner Class: 개별 클라이언트 처리 스레드 ---
     class UserService extends Thread {
         private Socket socket;
         private DataInputStream dis;
@@ -112,36 +123,215 @@ public class JavaChatServer extends JFrame {
         private String userName;
 
         public UserService(Socket socket) {
+            this.socket = socket;
             try {
-                this.socket = socket;
                 dis = new DataInputStream(socket.getInputStream());
                 dos = new DataOutputStream(socket.getOutputStream());
-
-                // 클라이언트 최초 접속시 username 수신
-                String firstMsg = dis.readUTF(); // "/login username"
-                String[] tokens = firstMsg.split(" ");
-                if (tokens.length >= 2) {
-                    userName = tokens[1].trim();
-                    appendText("User joined: " + userName);
-                    userVec.add(this);
-                    if (!userList.contains(userName)) {
-                        userList.add(userName);
-                        // [수정 2] 초기값 설정 (프로필, 배경, 상태메시지)
-                        if(!userProfileImages.containsKey(userName)) userProfileImages.put(userName, "profile.jpg");
-                        if(!userBgImages.containsKey(userName)) userBgImages.put(userName, "ab.jpg"); // 기본 배경
-                        if(!userStatusMsgs.containsKey(userName)) userStatusMsgs.put(userName, "");   // 기본 상태메시지 없음
-                    }
-
-                    writeOne("Welcome " + userName + "\n");
-
-                    sendUserListToAll();
-                }
             } catch (IOException e) {
-                appendText("UserService init error: " + e.getMessage());
+                appendText("Stream init error: " + e.getMessage());
             }
         }
 
-        // 클라이언트에게 단일 메시지 전송
+        @Override
+        public void run() {
+            try {
+                // 1. 로그인 처리
+                if (!handleLogin()) return;
+
+                // 2. 메시지 수신 루프
+                while (true) {
+                    String msg = dis.readUTF().trim();
+                    if (msg == null || msg.equals("/exit")) {
+                        disconnect();
+                        break;
+                    }
+                    parseAndProcessMessage(msg);
+                }
+            } catch (IOException e) {
+                disconnect();
+            }
+        }
+
+        // 로그인 및 초기화
+        private boolean handleLogin() throws IOException {
+            String firstMsg = dis.readUTF(); // Expecting: "/login username"
+            String[] tokens = firstMsg.split(" ");
+            
+            if (tokens.length >= 2) {
+                userName = tokens[1].trim();
+                appendText("User joined: " + userName);
+                
+                userVec.add(this);
+                
+                if (!userList.contains(userName)) {
+                    userList.add(userName);
+                    // 초기 프로필 정보 세팅 (없을 경우 기본값)
+                    userProfileImages.putIfAbsent(userName, "profile.jpg");
+                    userBgImages.putIfAbsent(userName, "ab.jpg");
+                    userStatusMsgs.putIfAbsent(userName, "");
+                }
+
+                writeOne("Welcome " + userName + "\n");
+                sendUserListToAll(); // 전체 접속자 명단 브로드캐스트
+                return true;
+            }
+            return false;
+        }
+
+        // 메시지 종류별 분기 처리
+        private void parseAndProcessMessage(String msg) {
+            if (msg.startsWith("/to ")) {
+                handleWhisper(msg);
+            } else if (msg.startsWith("HEALTH_SEND:")) {
+                String broadcastMsg = msg.replace("HEALTH_SEND:", "HEALTH_BROADCAST:");
+                broadcast(broadcastMsg);
+            } else if (msg.startsWith("MAKE_ROOM:")) {
+                handleMakeRoom(msg);
+            } else if (msg.startsWith("SEND_ROOM_MSG:")) {
+                handleSendRoomMsg(msg);
+            } else if (msg.startsWith("GET_ROOM_MEMBERS:")) {
+                handleGetRoomMembers(msg);
+            } else if (msg.startsWith("CHANGE_PROFILE_IMAGE:")) {
+                handleProfileUpdate(msg, userProfileImages);
+            } else if (msg.startsWith("CHANGE_BG_IMAGE:")) {
+                handleProfileUpdate(msg, userBgImages);
+            } else if (msg.startsWith("CHANGE_STATUS:")) {
+                handleProfileUpdate(msg, userStatusMsgs);
+            }
+        }
+
+        // 귓속말 처리
+        private void handleWhisper(String msg) {
+            System.out.println("[서버] 귓속말 요청: " + msg);
+            String[] parts = msg.split(" ", 3);
+            
+            if (parts.length >= 3) {
+                String targetUser = parts[1];
+                String privateMsg = parts[2];
+                boolean found = false;
+
+                synchronized (userVec) {
+                    for (UserService u : userVec) {
+                        if (u.userName.equals(targetUser)) {
+                            u.writeOne("WHISPER:" + userName + ":" + privateMsg);
+                            found = true;
+                        }
+                    }
+                }
+
+                // 보낸 사람에게도 확인 메시지 전송 (동기화 필요)
+                if (found) {
+                    synchronized (userVec) {
+                        for (UserService u : userVec) {
+                            if (u.userName.equals(userName)) {
+                                u.writeOne("WHISPER_SENT:" + targetUser + ":" + privateMsg);
+                            }
+                        }
+                    }
+                } else {
+                    writeOne("WHISPER_FAIL:" + targetUser);
+                }
+            } else {
+                writeOne("[시스템] 사용법: /to [상대방이름] [메시지]");
+            }
+        }
+
+        // 채팅방 생성 처리
+        private void handleMakeRoom(String msg) {
+            try {
+                String[] parts = msg.split(":");
+                String roomName = parts[1];
+                Vector<String> members = new Vector<>(Arrays.asList(parts[2].split(",")));
+
+                ChatRoomInfo room = new ChatRoomInfo(roomName, members);
+                chatRooms.put(roomName, room);
+
+                // 방 멤버들에게 알림
+                synchronized (userVec) {
+                    for (UserService u : userVec) {
+                        if (members.contains(u.userName)) {
+                            u.writeOne("ROOM_CREATED:" + roomName + ":" + String.join(",", members));
+                        }
+                    }
+                }
+                appendText("[SERVER] Room created: " + roomName);
+            } catch (Exception ex) {
+                appendText("[SERVER] Room create error: " + ex.getMessage());
+            }
+        }
+
+        // 방 메시지 전송 처리
+        private void handleSendRoomMsg(String msg) {
+            String[] parts = msg.split(":", 3);
+            String roomName = parts[1];
+            String message = parts[2];
+            String formattedMsg = "[" + userName + "] " + message;
+            
+            sendRoomMessage(roomName, formattedMsg);
+        }
+
+        // 방 멤버 조회 요청 처리
+        private void handleGetRoomMembers(String msg) {
+            String roomName = msg.split(":")[1];
+            ChatRoomInfo room = chatRooms.get(roomName);
+            if (room != null) {
+                String membersMsg = "ROOM_MEMBERS:" + roomName + ":" + String.join(",", room.members);
+                writeOne(membersMsg);
+            }
+        }
+
+        // 프로필/배경/상태메시지 업데이트 공통 처리
+        private void handleProfileUpdate(String msg, ConcurrentHashMap<String, String> storage) {
+            // 메시지 내에 ':'가 데이터로 포함될 수 있으므로 split limit 3
+            String[] parts = msg.split(":", 3); 
+            if (parts.length >= 3) {
+                String targetUser = parts[1];
+                String value = parts[2];
+                
+                storage.put(targetUser, value);
+                sendUserListToAll(); // 변경 사항 즉시 전파
+            }
+        }
+
+        // 특정 채팅방에 메시지 브로드캐스트
+        private void sendRoomMessage(String roomName, String msg) {
+            ChatRoomInfo room = chatRooms.get(roomName);
+            if (room == null) return;
+
+            Vector<String> members = room.members;
+            String msgToSend = "ROOM_MSG:" + roomName + ":" + msg;
+
+            synchronized (userVec) {
+                for (UserService u : userVec) {
+                    if (members.contains(u.userName)) {
+                        u.writeOne(msgToSend);
+                    }
+                }
+            }
+        }
+
+        // 전체 접속자 목록 및 프로필 정보 전송
+        private void sendUserListToAll() {
+            String listMsg = "USERLIST:" + String.join(",", userList);
+            StringBuilder imageInfo = new StringBuilder();
+
+            // user1=img|bg|msg;user2=... 형식 조합
+            for (String user : userList) {
+                String img = userProfileImages.getOrDefault(user, "profile.jpg");
+                String bg = userBgImages.getOrDefault(user, "ab.jpg");
+                String msg = userStatusMsgs.getOrDefault(user, "");
+
+                imageInfo.append(user).append("=")
+                         .append(img).append("|")
+                         .append(bg).append("|")
+                         .append(msg).append(";");
+            }
+
+            String fullMsg = listMsg + ":" + imageInfo.toString();
+            broadcast(fullMsg);
+        }
+
+        // 단일 전송
         public void writeOne(String msg) {
             try {
                 dos.writeUTF(msg);
@@ -150,7 +340,7 @@ public class JavaChatServer extends JFrame {
             }
         }
 
-        // 모든 사용자에게 메시지 전송
+        // 전체 전송
         public void broadcast(String msg) {
             synchronized (userVec) {
                 for (UserService u : userVec) {
@@ -159,212 +349,19 @@ public class JavaChatServer extends JFrame {
             }
         }
 
-        // 모든 사용자에게 실시간 접속자 목록 전송 (배경, 상태메시지 포함)
-        private void sendUserListToAll() {
-            String listMsg = "USERLIST:" + String.join(",", userList);
-
-            // 데이터 형식: user1=프로필|배경|상태메시지;user2=...
-            StringBuilder imageInfo = new StringBuilder();
-            for (String user : userList) {
-                String img = userProfileImages.getOrDefault(user, "profile.jpg");
-                String bg = userBgImages.getOrDefault(user, "ab.jpg");
-                String msg = userStatusMsgs.getOrDefault(user, "");
-
-                // 구분자 | 를 사용하여 3가지 정보를 묶음
-                imageInfo.append(user).append("=")
-                    .append(img).append("|")
-                    .append(bg).append("|")
-                    .append(msg).append(";");
-            }
-
-            // 최종 메시지 포맷: USERLIST:user1,user2...:user1=img|bg|msg;...
-            String fullMsg = listMsg + ":" + imageInfo.toString();
-
-            synchronized (userVec) {
-                for (UserService u : userVec) {
-                    u.writeOne(fullMsg);
-                }
-            }
-        }
-
-        // 로그아웃 처리
+        // 연결 종료 처리
         private void disconnect() {
             try {
                 appendText("User left: " + userName);
                 userVec.remove(this);
                 userList.remove(userName);
                 sendUserListToAll();
+                
                 if (dis != null) dis.close();
                 if (dos != null) dos.close();
                 if (socket != null) socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
-            }
-        }
-
-        //스레드 루프
-        public void run() {
-            try {
-                while (true) {
-                    String msg = dis.readUTF().trim();
-
-                    if (msg.equals("/exit")) {
-                        disconnect();
-                        break;
-                    }
-
-                    // 귓속말 처리: /to username message
-                 // JavaChatServer.java -> run() 메서드 내부
-
-                 // [JavaChatServer.java] run() 메서드 내부 수정
-
-                    if (msg.startsWith("/to ")) {
-                        System.out.println("[서버] 귓속말 요청: " + msg);
-                        
-                        String[] parts = msg.split(" ", 3);
-                        if (parts.length >= 3) {
-                            String targetUser = parts[1];
-                            String privateMsg = parts[2];
-                            
-                            boolean found = false;
-
-                            synchronized (userVec) {
-                                for (UserService u : userVec) {
-                                    // 🚀 [핵심 수정] 이름이 같으면 무조건 보낸다! (break 삭제)
-                                    if (u.userName.equals(targetUser)) {
-                                        u.writeOne("WHISPER:" + userName + ":" + privateMsg);
-                                        found = true;
-                                        // 여기서 break; 를 하시면 안 됩니다!!
-                                        // 그래야 친구목록에도, 채팅방 1에도, 채팅방 2에도 다 전송됩니다.
-                                    }
-                                }
-                            }
-                            
-                            // 보낸 나에게도 확인 메시지 전송 (내 채팅방들에 다 뿌리기)
-                            if (found) {
-                                synchronized (userVec) {
-                                    for (UserService u : userVec) {
-                                        if (u.userName.equals(userName)) { // 나(userName)의 모든 연결 찾기
-                                            u.writeOne("WHISPER_SENT:" + targetUser + ":" + privateMsg);
-                                        }
-                                    }
-                                }
-                            } else {
-                                writeOne("WHISPER_FAIL:" + targetUser);
-                            }
-                        } else {
-                            writeOne("[시스템] 사용법: /to [상대방이름] [메시지]");
-                        }
-                        continue;
-                    }
-                    if (msg.startsWith("HEALTH_SEND:")) {
-                        // 받은 메시지: HEALTH_SEND:홍길동:운동|식단|계획
-                        // 보낼 메시지: HEALTH_BROADCAST:홍길동:운동|식단|계획
-                        String broadcastMsg = msg.replace("HEALTH_SEND:", "HEALTH_BROADCAST:");
-                        broadcast(broadcastMsg); // 모든 접속자에게 전송
-                        continue;
-                    }
-
-                    if (msg.startsWith("MAKE_ROOM:")) {
-                        try {
-                            String[] parts = msg.split(":");
-                            String roomName = parts[1];
-                            Vector<String> members = new Vector<>(Arrays.asList(parts[2].split(",")));
-
-                            // ChatRoomInfo 생성
-                            ChatRoomInfo room = new ChatRoomInfo(roomName, members);
-
-                            // 방 저장
-                            chatRooms.put(roomName, room);
-
-                            // 방에 속한 사람들에게 방 생성 메시지 전송
-                            synchronized (userVec) {
-                                for (UserService u : userVec) {
-                                    if (members.contains(u.userName)) {
-                                        u.writeOne("ROOM_CREATED:" + roomName + ":" + String.join(",", members));
-                                    }
-                                }
-                            }
-
-                            appendText("[SERVER] Room created: " + roomName);
-
-                        } catch (Exception ex) {
-                            appendText("[SERVER] Room create error: " + ex.getMessage());
-                        }
-
-                        continue; // 다음 메시지 처리
-                    }
-                    if (msg.startsWith("SEND_ROOM_MSG:")) {
-                        String[] parts = msg.split(":", 3);
-                        String roomName = parts[1];
-                        String message = parts[2];
-
-                        // 해당 방 멤버에게만 메시지 전송
-                        String formattedMsg = "[" + userName + "] " + message;
-                        sendRoomMessage(roomName, formattedMsg);
-
-                        continue;
-                    }
-                    if (msg.startsWith("GET_ROOM_MEMBERS:")) {
-                        String roomName = msg.split(":")[1];
-                        ChatRoomInfo room = chatRooms.get(roomName);
-                        if (room != null) {
-                            String membersMsg = "ROOM_MEMBERS:" + roomName + ":" + String.join(",", room.members);
-                            writeOne(membersMsg);
-                        }
-                        continue;
-                    }
-
-                    // 프로필 이미지, 배경 이미지, 상태 메시지 변경 처리
-                    if (msg.startsWith("CHANGE_PROFILE_IMAGE:")) {
-                        String[] parts = msg.split(":");
-                        if (parts.length >= 3) {
-                            String targetUser = parts[1];
-                            String imageName = parts[2];
-                            JavaChatServer.this.userProfileImages.put(targetUser, imageName);
-                            sendUserListToAll(); // 변경 즉시 전파
-                        }
-                        continue;
-                    }
-                    else if (msg.startsWith("CHANGE_BG_IMAGE:")) {
-                        String[] parts = msg.split(":");
-                        if (parts.length >= 3) {
-                            String targetUser = parts[1];
-                            String imageName = parts[2];
-                            JavaChatServer.this.userBgImages.put(targetUser, imageName);
-                            sendUserListToAll(); // 변경 즉시 전파
-                        }
-                        continue;
-                    }
-                    else if (msg.startsWith("CHANGE_STATUS:")) {
-                        String[] parts = msg.split(":", 3); // 메시지 내에 :가 있을 수 있으므로 limit 3
-                        if (parts.length >= 3) {
-                            String targetUser = parts[1];
-                            String statusMsg = parts[2];
-                            JavaChatServer.this.userStatusMsgs.put(targetUser, statusMsg);
-                            sendUserListToAll(); // 변경 즉시 전파
-                        }
-                        continue;
-                    }
-
-                }
-            } catch (IOException e) {
-                disconnect();
-            }
-        }
-
-        private void sendRoomMessage(String roomName, String msg) {
-            ChatRoomInfo room = chatRooms.get(roomName);
-            if (room == null) return;
-
-            Vector<String> members = room.members;
-            String msgToSend = "ROOM_MSG:" + roomName + ":" + msg;
-            synchronized (userVec) {
-                for (UserService u : userVec) {
-                    if (members.contains(u.userName)) {
-                        u.writeOne(msgToSend);
-                    }
-                }
             }
         }
     }

@@ -24,14 +24,13 @@ public class FriendList extends JFrame {
     private String ip;
     private int port;
     private DataOutputStream out;
+    
+    // [헬스케어 기능]
     private HealthCare healthWindow = null;
 
-
-    // UI 컴포넌트 멤버 변수화 (갱신을 위해)
     private JLabel myProfileLabel;
     private JLabel lblUser;
-    private JLabel lblMyStatus; // 내 상태메시지 표시용
-
+    private JLabel lblMyStatus;
 
     private Vector<String> friendNames = new Vector<>();
     private static Vector<ChatRoomInfo> chatRooms = new Vector<>();
@@ -51,18 +50,17 @@ public class FriendList extends JFrame {
         setSize(300, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // 배경 이미지 패널 설정
+        // [배경 설정] 여기 설정된 'abc.jpg'가 계속 유지됩니다.
         contentPane = new ImagePanel("image/abc.jpg");
         contentPane.setLayout(new BorderLayout());
         setContentPane(contentPane);
 
-        // --- [왼쪽 사이드바] ---
+        // --- 왼쪽 사이드바 ---
         JPanel sidePanel = new JPanel();
         sidePanel.setOpaque(false);
         sidePanel.setPreferredSize(new Dimension(60, 0));
         sidePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 15));
 
-        // 친구 아이콘
         JLabel lblPeopleIcon = new JLabel();
         lblPeopleIcon.setPreferredSize(new Dimension(35, 35));
         lblPeopleIcon.setHorizontalAlignment(SwingConstants.CENTER);
@@ -75,7 +73,6 @@ public class FriendList extends JFrame {
             lblPeopleIcon.setText("P");
         }
 
-        // 채팅방 목록 버튼
         JButton btnChatList = new JButton();
         btnChatList.setBorderPainted(false);
         btnChatList.setContentAreaFilled(false);
@@ -95,19 +92,19 @@ public class FriendList extends JFrame {
             new ChatRoomList(username, ip, port, out, chatRooms, this);
         });
 
-
+        // [헬스케어 버튼]
         JButton btnHealth = new JButton();
         btnHealth.setBorderPainted(false);
         btnHealth.setContentAreaFilled(false);
         btnHealth.setFocusPainted(false);
         btnHealth.setMargin(new Insets(0, 0, 0, 0));
         try {
-            ImageIcon healthIcon = new ImageIcon("image/health.jpg"); // 아이콘 이미지
+            ImageIcon healthIcon = new ImageIcon("image/health.jpg"); 
             Image img = healthIcon.getImage();
             Image newImg = img.getScaledInstance(35, 35, Image.SCALE_SMOOTH);
             btnHealth.setIcon(new ImageIcon(newImg));
         } catch (Exception e) {
-            btnHealth.setText("Health"); // 이미지 없으면 텍스트
+            btnHealth.setText("Health");
         }
         btnHealth.addActionListener(e -> {
             if (healthWindow == null || !healthWindow.isVisible()) {
@@ -119,19 +116,17 @@ public class FriendList extends JFrame {
 
         sidePanel.add(lblPeopleIcon);
         sidePanel.add(btnChatList);
-        sidePanel.add(btnHealth);   // [추가] 헬스케어
+        sidePanel.add(btnHealth); 
         contentPane.add(sidePanel, BorderLayout.WEST);
 
-        // --- [오른쪽 메인 영역] ---
+        // --- 오른쪽 메인 영역 ---
         JPanel rightAreaPanel = new JPanel(new BorderLayout());
         rightAreaPanel.setOpaque(false);
 
-        // 상단 헤더 패널 (내 프로필)
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
         headerPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // 내 프로필 정보 패널
         JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         userPanel.setOpaque(false);
 
@@ -140,18 +135,17 @@ public class FriendList extends JFrame {
         myProfileLabel.setHorizontalAlignment(SwingConstants.CENTER);
         myProfileLabel.setName("ProfileImageLabel_" + username);
 
-        // 초기 이미지 로드
         ImageIcon defaultIcon = getProfileIcon("profile.jpg");
         if (defaultIcon != null) myProfileLabel.setIcon(defaultIcon);
         else myProfileLabel.setText("👤");
 
+        // 클릭 시 프로필 업로드
         myProfileLabel.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
-                openProfileDetail(username);
+                uploadProfileImage(myProfileLabel); 
             }
         });
 
-        // 이름 및 상태메시지를 담을 패널
         JPanel myInfoTextPanel = new JPanel(new GridLayout(2, 1));
         myInfoTextPanel.setOpaque(false);
 
@@ -159,7 +153,7 @@ public class FriendList extends JFrame {
         lblUser.setFont(new Font("Dialog", Font.BOLD, 18));
         lblUser.setForeground(Color.BLACK);
 
-        lblMyStatus = new JLabel(""); // 내 상태메시지
+        lblMyStatus = new JLabel("");
         lblMyStatus.setFont(new Font("Dialog", Font.PLAIN, 12));
         lblMyStatus.setForeground(Color.GRAY);
 
@@ -169,7 +163,6 @@ public class FriendList extends JFrame {
         userPanel.add(myProfileLabel);
         userPanel.add(myInfoTextPanel);
 
-        // 대화하기 버튼
         JButton btnOpenSelect = new JButton("➕ 대화");
         btnOpenSelect.setFocusPainted(false);
         btnOpenSelect.setBackground(Color.WHITE);
@@ -184,7 +177,6 @@ public class FriendList extends JFrame {
         headerPanel.add(buttonWrapper, BorderLayout.EAST);
         rightAreaPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // 중앙 친구 목록 스크롤 영역
         friendPanel = new JPanel();
         friendPanel.setLayout(new BoxLayout(friendPanel, BoxLayout.Y_AXIS));
         friendPanel.setOpaque(false);
@@ -206,16 +198,59 @@ public class FriendList extends JFrame {
         }
     }
 
-    // 🚀 [핵심 수정] updateFriends: 서버 정보를 받아 맵을 갱신하고 화면을 다시 그립니다.
+    private void uploadProfileImage(JLabel profileLabel) {
+        JFileChooser fileChooser = new JFileChooser();
+        int result = fileChooser.showOpenDialog(this);
+
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            File imageDir = new File("image");
+            if (!imageDir.exists()) imageDir.mkdirs();
+            
+            String extension = "";
+            int i = selectedFile.getName().lastIndexOf('.');
+            if (i > 0) extension = selectedFile.getName().substring(i);
+            
+            String savedFileName = username + extension; 
+            File targetFile = new File(imageDir, savedFileName);
+            
+            try {
+                copyFile(selectedFile, targetFile);
+
+                ImageIcon originalIcon = new ImageIcon(targetFile.getAbsolutePath());
+                Image img = originalIcon.getImage();
+                Image newimg = img.getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                profileLabel.setIcon(new ImageIcon(newimg));
+                profileLabel.setText("");
+
+                out.writeUTF("CHANGE_PROFILE_IMAGE:" + username + ":" + savedFileName);
+                out.flush();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "이미지 변경 실패: " + e.getMessage());
+            }
+        }
+    }
+
+    private void copyFile(File source, File dest) throws IOException {
+        try (InputStream is = new FileInputStream(source);
+             OutputStream os = new FileOutputStream(dest)) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = is.read(buffer)) > 0) {
+                os.write(buffer, 0, length);
+            }
+        }
+    }
+
     public void updateFriends(Vector<String> names, String detailInfo) {
-        // 1. 상세 정보 파싱 및 저장
         if (detailInfo != null && !detailInfo.isEmpty()) {
             String[] users = detailInfo.split(";");
             for (String u : users) {
                 String[] parts = u.split("=");
                 if (parts.length == 2) {
                     String uName = parts[0];
-                    // split에 -1을 주어야 빈 문자열(상태메시지 없음 등)도 배열에 포함됨
                     String[] vals = parts[1].split("\\|", -1); 
                     if (vals.length >= 3) {
                         userImages.put(uName, vals[0]);
@@ -226,10 +261,8 @@ public class FriendList extends JFrame {
             }
         }
 
-        // 2. [추가] 내 프로필 영역(상단) 갱신 (이미지, 상태메시지, 전체 배경)
         refreshMyProfile();
 
-        // 3. 친구 목록 재생성
         friendPanel.removeAll();
         friendNames.clear();
 
@@ -237,7 +270,6 @@ public class FriendList extends JFrame {
             if (n == null) continue;
             String trimmed = n.trim();
             if (!trimmed.isEmpty() && !trimmed.equals(username)) {
-                // 저장된 맵에서 이미지 정보를 가져옴
                 String imageName = userImages.getOrDefault(trimmed, "profile.jpg");
                 addFriend(trimmed, imageName);
             }
@@ -247,9 +279,9 @@ public class FriendList extends JFrame {
         friendPanel.repaint();
     }
 
-    // 내 프로필 영역 및 전체 배경화면 새로고침
+    // 🚀 [수정됨] 배경화면 동기화 로직 제거 (원래 abc.jpg 유지)
     private void refreshMyProfile() {
-        // 1. 내 이미지 갱신
+        // 1. 내 프로필 이미지 갱신
         String myImg = userImages.getOrDefault(username, "profile.jpg");
         ImageIcon newIcon = getProfileIcon(myImg);
         if(myProfileLabel != null) myProfileLabel.setIcon(newIcon);
@@ -258,9 +290,11 @@ public class FriendList extends JFrame {
         String myMsg = userStatusMsgs.getOrDefault(username, "");
         if(lblMyStatus != null) lblMyStatus.setText(myMsg);
 
+        // 3. [삭제됨] 배경화면 갱신 로직
+        // 여기에 있던 contentPane.setImagePath(...) 코드를 지웠습니다.
+        // 이제 FriendList의 배경은 처음 설정한 'image/abc.jpg'로 고정됩니다.
     }
 
-    // addFriend: 친구 목록 UI 생성
     public void addFriend(String friendName, String imageName) {
         friendNames.add(friendName);
 
@@ -272,7 +306,6 @@ public class FriendList extends JFrame {
         panel.setBorder(new CompoundBorder(lineBorder, new EmptyBorder(0, 0, 0, 10)));
         panel.setOpaque(false);
 
-        // 프로필 이미지 라벨
         JLabel profileLabel = new JLabel();
         profileLabel.setPreferredSize(new Dimension(50, 50));
         profileLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -290,7 +323,6 @@ public class FriendList extends JFrame {
             }
         });
 
-        // 텍스트 패널 (이름 + 상태메시지)
         JPanel textPanel = new JPanel(new GridLayout(2, 1));
         textPanel.setOpaque(false);
         textPanel.setBorder(new EmptyBorder(0, 10, 0, 0));
@@ -300,7 +332,6 @@ public class FriendList extends JFrame {
         nameLabel.setForeground(Color.BLACK);
         nameLabel.setName("FriendNameLabel_" + friendName);
 
-        // 상태 메시지 라벨
         String status = userStatusMsgs.getOrDefault(friendName, "");
         JLabel statusLabel = new JLabel(status);
         statusLabel.setFont(new Font("Dialog", Font.PLAIN, 12));
@@ -315,7 +346,6 @@ public class FriendList extends JFrame {
         westWrapper.add(textPanel);
 
         panel.add(westWrapper, BorderLayout.CENTER);
-
         friendPanel.add(panel);
     }
 
@@ -377,13 +407,9 @@ public class FriendList extends JFrame {
         dialog.setVisible(true);
     }
 
-    // 실시간 업데이트용 (보조)
     public void updateFriendProfileImage(String targetUser, String imageName) {
         userImages.put(targetUser, imageName);
-        // 전체 갱신 호출 (상태메시지 등 일관성을 위해)
         refreshMyProfile(); 
-        // 친구 목록의 특정 이미지만 바꾸고 싶다면 아래 재귀함수 사용 가능하지만,
-        // 현재 구조상 updateFriends가 주기적으로 호출된다면 굳이 필요 없을 수 있음.
         updateImageRecursive(contentPane, targetUser, imageName);
     }
 
