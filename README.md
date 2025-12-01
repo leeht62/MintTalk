@@ -20,7 +20,7 @@ Java Swing과 Socket 통신을 활용한 실시간 멀티 채팅 메신저 프�
 
 <img src="screenshots/profile.png" width="200">
 
-실행 화면 스크린샷을 screenshots 폴더에 추가하면 여기에 표시됩니다.
+
 
 ✨ Key Features (주요 기능)
 
