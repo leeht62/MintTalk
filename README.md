@@ -6,16 +6,26 @@ Java Swing과 Socket 통신을 활용한 실시간 멀티 채팅 메신저 프�
 📸 Screenshots
 
 로그인 화면
-<img src="screenshots/login.png" width="150" alt="로그인">
+
 친구 목록
-<img src="screenshots/friendlist.png" width="150" alt="친구목록">
+
 채팅방 (이미지/이모티콘)
-<img src="screenshots/chatting.png" width="150" alt="채팅방">
+
 프로필 상세
-<img src="screenshots/profile.png" width="150" alt="프로필">
+
 헬스케어 (NEW)
+
+<img src="screenshots/login.png" width="150" alt="로그인">
+
+<img src="screenshots/friendlist.png" width="150" alt="친구목록">
+
+<img src="screenshots/chatting.png" width="150" alt="채팅방">
+
+<img src="screenshots/profile.png" width="150" alt="프로필">
+
 <img src="screenshots/healthcare.png" width="150" alt="헬스케어">
 
+screenshots 폴더에 해당 이미지 파일들이 있어야 정상적으로 보입니다.
 
 ✨ Key Features (주요 기능)
 
@@ -31,7 +41,7 @@ Java Swing과 Socket 통신을 활용한 실시간 멀티 채팅 메신저 프�
 
 채팅방 생성: 원하는 친구들을 선택하여 그룹 채팅방을 만들 수 있습니다.
 
-UI 디자인: 나(오른쪽/노란색), 상대방(왼쪽/흰색/프로필사진)으로 구분된 말풍선 UI를 제공합니다.
+UI 디자인: 나(오른쪽/노란색), 상대방(왼쪽/흰색/프로필사진)으로 구분된 말풍선 UI를 제공합니다. (카카오톡 스타일)
 
 멀티미디어 전송:
 
