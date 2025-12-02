@@ -127,11 +127,11 @@ A. 이미지 파일의 크기가 너무 크면 소켓 버퍼 제한으로 전송
 
 * **Developer:** 이현태, 서민식
 
-* **Contact:** $\\$
+* **Contact:**
 zdfxd3611@naver.com
 sck22222@naver.com
 
-* **University:** $\\$
+* **University:**
 Hansung University
 
 *This project was created for educational purposes to study Java Network Programming.*
