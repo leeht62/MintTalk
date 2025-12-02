@@ -1,18 +1,24 @@
 🌿 Mint Talk (Java Chat Application)
 
-Java Swing과 Socket 통신을 활용한 실시간 멀티 채팅 메신저 프로젝트입니다. 카카오톡과 유사한 UI/UX를 목표로 하여 프로필 사진 변경, 이미지 전송, 이모티콘, 실시간 상태 동기화 기능을 구현했습니다.
+Java Swing과 Socket 통신을 활용한 실시간 멀티 채팅 메신저 프로젝트입니다.
+카카오톡과 유사한 UI/UX를 기반으로 프로필 사진 변경, 이미지/이모티콘 전송 기능을 제공하며, 사용자의 운동 및 식단을 기록하고 공유하는 헬스케어 기능을 새롭게 구현했습니다.
 
 📸 Screenshots
 
+로그인 화면
+<img src="screenshots/login.png" width="150" alt="로그인">
 
+친구 목록
+<img src="screenshots/friendlist.png" width="150" alt="친구목록">
 
-<img src="screenshots/login.png" width="200" alt="로그인">
+채팅방 (이미지/이모티콘)
+<img src="screenshots/chatting.png" width="150" alt="채팅방">
 
-<img src="screenshots/friendlist.png" width="200" alt="친구목록">
+프로필 상세
+<img src="screenshots/profile.png" width="150" alt="프로필">
 
-<img src="screenshots/chatting.png" width="200" alt="채팅방">
-
-<img src="screenshots/profile.png" width="200" alt="프로필">
+헬스케어 (NEW)
+<img src="screenshots/healthcare.png" width="150" alt="헬스케어">
 
 ✨ Key Features (주요 기능)
 
@@ -28,7 +34,7 @@ Java Swing과 Socket 통신을 활용한 실시간 멀티 채팅 메신저 프�
 
 채팅방 생성: 원하는 친구들을 선택하여 그룹 채팅방을 만들 수 있습니다.
 
-UI 디자인: 나(오른쪽/노란색), 상대방(왼쪽/흰색/프로필사진)으로 구분된 말풍선 UI를 제공합니다. (카카오톡 스타일)
+UI 디자인: 나(오른쪽/노란색), 상대방(왼쪽/흰색/프로필사진)으로 구분된 말풍선 UI를 제공합니다.
 
 멀티미디어 전송:
 
@@ -36,11 +42,11 @@ UI 디자인: 나(오른쪽/노란색), 상대방(왼쪽/흰색/프로필사진)
 
 이모티콘 전송 기능
 
-3. 헬스케어 (Health Care)
+3. 헬스케어 (Health Care) 🆕
 
-건강 기록 관리: 별도의 헬스케어 창을 통해 오늘의 운동, 식단, 목표를 체계적으로 기록할 수 있습니다.
+건강 기록 관리: 별도의 헬스케어 윈도우를 통해 오늘의 운동량, 식단, 목표를 체계적으로 기록하고 관리할 수 있습니다.
 
-정보 공유: 기록한 건강 정보를 채팅방에 있는 친구들에게 손쉽게 공유하여 상호 동기부여를 할 수 있습니다.
+정보 공유: 기록한 건강 정보를 버튼 하나로 채팅방에 있는 친구들에게 공유하여 서로 운동 진행 상황을 체크하고 동기부여를 할 수 있습니다.
 
 4. 기술적 특징
 
@@ -66,7 +72,7 @@ src/
 │   ├── ChatRoomList.java      # 채팅방 목록 화면
 │   ├── ChatCellRenderer.java  # 채팅 리스트 렌더러 (말풍선, 프로필 사진)
 │   ├── ProfileDetailDialog.java # 프로필 상세 보기 및 수정 창
-│   └── HealthCare.java        # (부가기능) 헬스케어 기능
+│   └── HealthCare.java        # (헬스케어) 운동/식단 관리 및 공유 기능
 ├── image/
 │   ├── ImagePanel.java        # 배경 이미지를 그리는 패널
 │   ├── RoundedButton.java     # 둥근 버튼 컴포넌트
@@ -127,8 +133,8 @@ A. 이미지 파일의 크기가 너무 크면 소켓 버퍼 제한으로 전송
 
 Developer: 이현태, 서민식
 
-Contact: [이메일 주소]
+Contact: minsik010228@gmail.com
 
-University: [학교 이름 (선택사항)]
+University: Hansung University
 
 This project was created for educational purposes to study Java Network Programming.
