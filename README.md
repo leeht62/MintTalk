@@ -6,26 +6,16 @@ Java Swing과 Socket 통신을 활용한 실시간 멀티 채팅 메신저 프�
 📸 Screenshots
 
 로그인 화면
-
-친구 목록
-
-채팅방 (이미지/이모티콘)
-
-프로필 상세
-
-헬스케어 (NEW)
-
 <img src="screenshots/login.png" width="150" alt="로그인">
-
+친구 목록
 <img src="screenshots/friendlist.png" width="150" alt="친구목록">
-
+채팅방 (이미지/이모티콘)
 <img src="screenshots/chatting.png" width="150" alt="채팅방">
-
+프로필 상세
 <img src="screenshots/profile.png" width="150" alt="프로필">
-
+헬스케어 (NEW)
 <img src="screenshots/healthcare.png" width="150" alt="헬스케어">
 
-screenshots 폴더에 해당 이미지 파일들이 있어야 정상적으로 보입니다.
 
 ✨ Key Features (주요 기능)
 
