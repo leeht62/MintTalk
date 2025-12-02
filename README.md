@@ -3,29 +3,7 @@
 **Java Swing과 Socket 통신을 활용한 실시간 멀티 채팅 메신저 프로젝트입니다.**
 카카오톡과 유사한 UI/UX를 기반으로 프로필 사진 변경, 이미지/이모티콘 전송 기능을 제공하며, **사용자의 운동 및 식단을 기록하고 공유하는 헬스케어 기능**을 새롭게 구현했습니다.
 
-## 📸 Screenshots
-
-로그인 화면
-
-친구 목록
-
-채팅방 (이미지/이모티콘)
-
-프로필 상세
-
-헬스케어 (NEW)
-
-<img src="screenshots/login.png" width="150" alt="로그인">
-
-<img src="screenshots/friendlist.png" width="150" alt="친구목록">
-
-<img src="screenshots/chatting.png" width="150" alt="채팅방">
-
-<img src="screenshots/profile.png" width="150" alt="프로필">
-
-<img src="screenshots/healthcare.png" width="150" alt="헬스케어">
-
-*screenshots 폴더에 해당 이미지 파일들이 있어야 정상적으로 보입니다.*
+## 📸 Screenshots | 로그인 화면 | 친구 목록 | 채팅방 (이미지/이모티콘) | 프로필 상세 | 헬스케어 (NEW) | | :---: | :---: | :---: | :---: | :---: | | <img src="screenshots/login.png" width="150" alt="로그인"> | <img src="screenshots/friendlist.png" width="150" alt="친구목록"> | <img src="screenshots/chatting.png" width="150" alt="채팅방"> | <img src="screenshots/profile.png" width="150" alt="프로필"> | <img src="screenshots/healthcare.png" width="150" alt="헬스케어"> | > *`screenshots`
 
 ## ✨ Key Features (주요 기능)
 
