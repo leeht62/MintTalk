@@ -56,32 +56,19 @@ public class JavaChatClientMain extends JFrame {
         lblTitle.setForeground(Color.WHITE);
         contentPane.add(lblTitle);
 
-        JLabel lblUser = createLabel("User Name", 67, 70);
-        contentPane.add(lblUser);
+        // 입력창 라벨 및 텍스트필드 추가
+        addInputLabel("User Name", 67, 70);
+        txtUserName = addInputField(67, 95);
 
-        txtUserName = new RoundedTextField();
-        txtUserName.setBounds(67, 95, 120, 30);
-        txtUserName.setHorizontalAlignment(SwingConstants.CENTER);
-        contentPane.add(txtUserName);
-
-        JLabel lblIp = createLabel("IP Address", 67, 135);
-        contentPane.add(lblIp);
-
-        txtIpAddress = new RoundedTextField();
-        txtIpAddress.setBounds(67, 160, 120, 30);
-        txtIpAddress.setHorizontalAlignment(SwingConstants.CENTER);
+        addInputLabel("IP Address", 67, 135);
+        txtIpAddress = addInputField(67, 160);
         txtIpAddress.setText("127.0.0.1");
-        contentPane.add(txtIpAddress);
 
-        JLabel lblPort = createLabel("Port Number", 67, 200);
-        contentPane.add(lblPort);
-
-        txtPortNumber = new RoundedTextField();
-        txtPortNumber.setBounds(67, 225, 120, 30);
-        txtPortNumber.setHorizontalAlignment(SwingConstants.CENTER);
+        addInputLabel("Port Number", 67, 200);
+        txtPortNumber = addInputField(67, 225);
         txtPortNumber.setText("30000");
-        contentPane.add(txtPortNumber);
 
+        // 로그인 버튼
         JButton btnConnect = new RoundedButton("LOGIN");
         btnConnect.setBounds(67, 280, 120, 40);
         btnConnect.setFont(new Font("Tahoma", Font.BOLD, 14));
@@ -95,12 +82,20 @@ public class JavaChatClientMain extends JFrame {
         txtPortNumber.addActionListener(e -> connectServer());
     }
 
-    private JLabel createLabel(String text, int x, int y) {
+    private void addInputLabel(String text, int x, int y) {
         JLabel label = new JLabel(text);
         label.setBounds(x, y, 120, 25);
         label.setHorizontalAlignment(SwingConstants.CENTER);
         label.setForeground(Color.WHITE);
-        return label;
+        contentPane.add(label);
+    }
+
+    private RoundedTextField addInputField(int x, int y) {
+        RoundedTextField field = new RoundedTextField();
+        field.setBounds(x, y, 120, 30);
+        field.setHorizontalAlignment(SwingConstants.CENTER);
+        contentPane.add(field);
+        return field;
     }
 
     private void connectServer() {
@@ -143,6 +138,7 @@ public class JavaChatClientMain extends JFrame {
             while (true) {
                 String msg = dis.readUTF();
 
+                // 친구 목록 데이터 수신
                 if (msg.startsWith("USERLIST:")) {
                     String[] sections = msg.split(":", 3);
                     String namesPart = sections[1];
@@ -151,6 +147,7 @@ public class JavaChatClientMain extends JFrame {
                     Vector<String> users = new Vector<>(Arrays.asList(namesPart.split(",")));
                     SwingUtilities.invokeLater(() -> friendList.updateFriends(users, detailsPart));
                 }
+                // 채팅방 생성 알림
                 else if (msg.startsWith("ROOM_CREATED:")) {
                     String[] parts = msg.split(":");
                     String roomName = parts[1];
@@ -161,16 +158,15 @@ public class JavaChatClientMain extends JFrame {
                         friendList.addChatRoom(room);
                     });
                 }
-                // 🚀 [추가] 헬스케어 메시지 처리 연결
+                // 헬스케어 메시지 처리
                 else if (msg.startsWith("HEALTH_BROADCAST:")) { 
                     friendList.handleHealthCommand(msg);
                 }
             }
         } catch (IOException e) {
-            System.out.println("서버와의 연결이 끊어졌습니다.");
             SwingUtilities.invokeLater(() -> {
                 if (friendList != null) friendList.dispose();
-                this.setVisible(true); // 로그인 창으로 복귀
+                this.setVisible(true);
                 JOptionPane.showMessageDialog(this, "서버 연결이 종료되었습니다.");
             });
         }
