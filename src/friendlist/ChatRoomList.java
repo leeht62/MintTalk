@@ -70,7 +70,7 @@ public class ChatRoomList extends JFrame {
             this.dispose();
         });
 
-        // 채팅방 목록 아이콘 (현재 화면임)
+        // 채팅방 목록 아이콘
         JLabel lblChatIcon = new JLabel();
         lblChatIcon.setPreferredSize(new Dimension(35, 35));
         lblChatIcon.setHorizontalAlignment(SwingConstants.CENTER);
@@ -96,7 +96,7 @@ public class ChatRoomList extends JFrame {
 
         rightAreaPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // (B) 채팅방 리스트 패널
+        // 채팅방 리스트 패널
         roomListPanel = new JPanel();
         roomListPanel.setLayout(new BoxLayout(roomListPanel, BoxLayout.Y_AXIS));
         roomListPanel.setOpaque(false);
@@ -138,10 +138,10 @@ public class ChatRoomList extends JFrame {
             new EmptyBorder(5, 5, 5, 5)
         ));
 
-        JLabel nameLabel = new JLabel(room.roomName); // roomName 필드 사용 가정
+        JLabel nameLabel = new JLabel(room.roomName);
         nameLabel.setFont(new Font("Dialog", Font.PLAIN, 15));
         nameLabel.setForeground(Color.BLACK);
-        nameLabel.setBorder(new EmptyBorder(0, 10, 0, 0)); // 왼쪽 여백
+        nameLabel.setBorder(new EmptyBorder(0, 10, 0, 0));
 
         JButton btnEnter = new JButton("입장");
         btnEnter.setFont(new Font("Dialog", Font.PLAIN, 12));
