@@ -142,7 +142,7 @@ public class JavaChatClientMain extends JFrame {
         try {
             while (true) {
                 String msg = dis.readUTF();
-
+                //친구 목록 받아와서 friendlist 객체생성
                 if (msg.startsWith("USERLIST:")) {
                     String[] sections = msg.split(":", 3);
                     String namesPart = sections[1];

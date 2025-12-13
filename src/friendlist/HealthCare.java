@@ -99,7 +99,7 @@ public class HealthCare extends JFrame {
     // [핵심 변경] 운동 입력 패널 생성 함수
     private JPanel createExercisePanel() {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBorder(new TitledBorder("🏋️ 오늘 운동량 (추가 후 공유)"));
+        panel.setBorder(new TitledBorder("오늘 운동량 (추가 후 공유)"));
         panel.setPreferredSize(new Dimension(0, 150)); // 높이 고정
 
         // 상단: 입력부 (운동명 + 시간선택 + 추가버튼)

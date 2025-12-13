@@ -29,18 +29,18 @@ public class ProfileDetailDialog extends JDialog {
         setLocationRelativeTo(owner);
         setLayout(null);
 
-        // 1. 배경 이미지
+        // 배경 이미지
         lblBgImg = new JLabel();
         lblBgImg.setBounds(0, 0, 350, 500);
         updateImage(lblBgImg, bgImg, 350, 500, "ab.jpg");
 
-        // 내 프로필이면 배경 더블 클릭으로 변경 가능
+        // 내 프로필이 참값일때 직접 프로필 배경화면 수정가능
         if (isMine) {
             lblBgImg.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             lblBgImg.addMouseListener(new java.awt.event.MouseAdapter() {
                 public void mouseClicked(java.awt.event.MouseEvent evt) {
                     if (evt.getClickCount() == 2) {
-                        uploadImage(true); // true = 배경화면 변경
+                        uploadImage(true);
                     }
                 }
             });
@@ -53,7 +53,7 @@ public class ProfileDetailDialog extends JDialog {
         contentPanel.setBounds(0, 0, 350, 500);
         contentPanel.setOpaque(false);
 
-        // 2. 닫기 버튼
+        // 닫기 버튼
         JButton btnClose = new JButton("X");
         btnClose.setBounds(300, 10, 30, 30);
         btnClose.setBorderPainted(false);
@@ -63,12 +63,13 @@ public class ProfileDetailDialog extends JDialog {
         btnClose.addActionListener(e -> dispose());
         contentPanel.add(btnClose);
 
-        // 3. 프로필 이미지
+        // 프로필 이미지
         lblProfileImg = new JLabel();
         int pSize = 90;
         lblProfileImg.setBounds((350 - pSize) / 2 - 8, 250, pSize, pSize);
         updateImage(lblProfileImg, profileImg, pSize, pSize, "profile.jpg");
 
+        // 프로필 이미지 수정 가능
         if (isMine) {
             lblProfileImg.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             lblProfileImg.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -80,7 +81,7 @@ public class ProfileDetailDialog extends JDialog {
         }
         contentPanel.add(lblProfileImg);
 
-        // 4. 이름
+        // 이름
         lblName = new JLabel(targetName);
         lblName.setForeground(Color.WHITE);
         lblName.setFont(new Font("Dialog", Font.BOLD, 18));
@@ -88,7 +89,7 @@ public class ProfileDetailDialog extends JDialog {
         lblName.setBounds(0, 350, 335, 30);
         contentPanel.add(lblName);
 
-        // 5. 상태 메시지
+        // 상태 메시지
         txtStatus = new JTextField(statusMsg);
         txtStatus.setBounds(40, 385, 255, 30);
         txtStatus.setHorizontalAlignment(SwingConstants.CENTER);
@@ -132,7 +133,7 @@ public class ProfileDetailDialog extends JDialog {
         }
     }
 
-    // 이미지 변경 및 업로드 (핵심 로직)
+    // 이미지 변경 및 업로드
     private void uploadImage(boolean isBg) {
         JFileChooser fileChooser = new JFileChooser();
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -146,7 +147,6 @@ public class ProfileDetailDialog extends JDialog {
             int i = originalName.lastIndexOf('.');
             if (i > 0) ext = originalName.substring(i);
 
-            // 파일명 규칙: 프로필은 "ID.jpg", 배경은 "ID_bg.jpg"
             String fileName;
             if (isBg) fileName = username + "_bg" + ext;
             else fileName = username + ext;
@@ -160,12 +160,11 @@ public class ProfileDetailDialog extends JDialog {
                 out.writeUTF(protocol + ":" + username + ":" + fileName);
                 out.flush();
 
-                // UI 즉시 반영
                 if (isBg) updateImage(lblBgImg, fileName, 350, 500, "ab.jpg");
                 else updateImage(lblProfileImg, fileName, 90, 90, "profile.jpg");
 
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "이미지 변경 실패: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, e.getMessage());
             }
         }
     }

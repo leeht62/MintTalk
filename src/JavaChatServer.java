@@ -26,7 +26,7 @@ public class JavaChatServer extends JFrame {
     private final Vector<String> userList = new Vector<>();
     private final ConcurrentHashMap<String, ChatRoomInfo> chatRooms = new ConcurrentHashMap<>();
 
-    // 사용자 프로필 정보 저장소 (동시성 제어를 위해 ConcurrentHashMap 권장)
+
     private final ConcurrentHashMap<String, String> userProfileImages = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> userBgImages = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> userStatusMsgs = new ConcurrentHashMap<>();
@@ -96,7 +96,7 @@ public class JavaChatServer extends JFrame {
         });
     }
 
-    // --- Inner Class: 클라이언트 접속 수락 스레드 ---
+    // 클라이언트 접속 수락 스레드
     class AcceptServer extends Thread {
         public void run() {
             while (true) {
@@ -115,7 +115,7 @@ public class JavaChatServer extends JFrame {
         }
     }
 
-    // --- Inner Class: 개별 클라이언트 처리 스레드 ---
+    // 개별 클라이언트 처리 스레드
     class UserService extends Thread {
         private Socket socket;
         private DataInputStream dis;
@@ -165,46 +165,45 @@ public class JavaChatServer extends JFrame {
                 
                 if (!userList.contains(userName)) {
                     userList.add(userName);
-                    // 초기 프로필 정보 세팅 (없을 경우 기본값)
+                    // 초기 프로필 정보 세팅
                     userProfileImages.putIfAbsent(userName, "profile.jpg");
                     userBgImages.putIfAbsent(userName, "ab.jpg");
                     userStatusMsgs.putIfAbsent(userName, "");
                 }
 
                 writeOne("Welcome " + userName + "\n");
-                sendUserListToAll(); // 전체 접속자 명단 브로드캐스트
+                sendUserListToAll();
                 return true;
             }
             return false;
         }
 
-        // 메시지 종류별 분기 처리
+        // 알맞은 메시지를 수신하면 그에 맞게 메시지를 처리함
         private void parseAndProcessMessage(String msg) {
             if (msg.startsWith("/to ")) {
                 handleWhisper(msg);
-            } else if (msg.startsWith("HEALTH_SEND:")) {
+            }else if (msg.startsWith("HEALTH_SEND:")) {
                 String broadcastMsg = msg.replace("HEALTH_SEND:", "HEALTH_BROADCAST:");
                 broadcast(broadcastMsg);
-            } else if (msg.startsWith("MAKE_ROOM:")) {
+            }else if (msg.startsWith("MAKE_ROOM:")) {
                 handleMakeRoom(msg);
-            } else if (msg.startsWith("SEND_ROOM_MSG:")) {
+            }else if (msg.startsWith("SEND_ROOM_MSG:")) {
                 handleSendRoomMsg(msg);
-            } else if (msg.startsWith("GET_ROOM_MEMBERS:")) {
+            }else if (msg.startsWith("GET_ROOM_MEMBERS:")) {
                 handleGetRoomMembers(msg);
-            } else if (msg.startsWith("CHANGE_PROFILE_IMAGE:")) {
+            }else if (msg.startsWith("CHANGE_PROFILE_IMAGE:")) {
                 handleProfileUpdate(msg, userProfileImages);
-            } else if (msg.startsWith("CHANGE_BG_IMAGE:")) {
+            }else if (msg.startsWith("CHANGE_BG_IMAGE:")) {
                 handleProfileUpdate(msg, userBgImages);
-            } else if (msg.startsWith("CHANGE_STATUS:")) {
+            }else if (msg.startsWith("CHANGE_STATUS:")) {
                 handleProfileUpdate(msg, userStatusMsgs);
             }
         }
 
-        // 귓속말 처리
+        // 귓속말
         private void handleWhisper(String msg) {
             System.out.println("[서버] 귓속말 요청: " + msg);
             String[] parts = msg.split(" ", 3);
-            
             if (parts.length >= 3) {
                 String targetUser = parts[1];
                 String privateMsg = parts[2];
@@ -218,8 +217,7 @@ public class JavaChatServer extends JFrame {
                         }
                     }
                 }
-
-                // 보낸 사람에게도 확인 메시지 전송 (동기화 필요)
+                // 보낸 사람에게도 확인 메시지를 전송함
                 if (found) {
                     synchronized (userVec) {
                         for (UserService u : userVec) {
@@ -228,11 +226,7 @@ public class JavaChatServer extends JFrame {
                             }
                         }
                     }
-                } else {
-                    writeOne("WHISPER_FAIL:" + targetUser);
                 }
-            } else {
-                writeOne("[시스템] 사용법: /to [상대방이름] [메시지]");
             }
         }
 
@@ -256,13 +250,13 @@ public class JavaChatServer extends JFrame {
                 }
                 appendText("[SERVER] Room created: " + roomName);
             } catch (Exception ex) {
-                appendText("[SERVER] Room create error: " + ex.getMessage());
+                appendText(ex.getMessage());
             }
         }
 
-        // 방 메시지 전송 처리
+        // 방에서 메시지 보내는 방법. 보내는 메시지에 닉네임 추가해서 다시 전체에게 보냄
         private void handleSendRoomMsg(String msg) {
-            String[] parts = msg.split(":", 3);
+            String[] parts = msg.split(":");
             String roomName = parts[1];
             String message = parts[2];
             String formattedMsg = "[" + userName + "] " + message;
@@ -280,20 +274,18 @@ public class JavaChatServer extends JFrame {
             }
         }
 
-        // 프로필/배경/상태메시지 업데이트 공통 처리
+        // 프로필,배경,상태메시지 업데이트 공통 처리
         private void handleProfileUpdate(String msg, ConcurrentHashMap<String, String> storage) {
-            // 메시지 내에 ':'가 데이터로 포함될 수 있으므로 split limit 3
-            String[] parts = msg.split(":", 3); 
+            String[] parts = msg.split(":");
             if (parts.length >= 3) {
                 String targetUser = parts[1];
                 String value = parts[2];
-                
                 storage.put(targetUser, value);
-                sendUserListToAll(); // 변경 사항 즉시 전파
+                sendUserListToAll();
             }
         }
 
-        // 특정 채팅방에 메시지 브로드캐스트
+        // 특정 채팅방에서 메시지를 보내는 메소드
         private void sendRoomMessage(String roomName, String msg) {
             ChatRoomInfo room = chatRooms.get(roomName);
             if (room == null) return;
@@ -318,7 +310,7 @@ public class JavaChatServer extends JFrame {
                 String img = userProfileImages.getOrDefault(user, "profile.jpg");
                 String bg = userBgImages.getOrDefault(user, "ab.jpg");
                 String msg = userStatusMsgs.getOrDefault(user, "");
-
+                // 예를들어 이현태를 이름이라 했을때, 이현태=프로필사진|기본배경화면|상태메시지; 이렇게 전송이됨
                 imageInfo.append(user).append("=")
                          .append(img).append("|")
                          .append(bg).append("|")
