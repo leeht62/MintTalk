@@ -14,18 +14,17 @@ import java.util.Vector;
 
 public class ChatRoomList extends JFrame {
     private JPanel contentPane;
-    private JPanel roomListPanel; // 친구 목록 대신 채팅방 목록 패널
+    private JPanel roomListPanel; // 친구 목록 대신 채팅방 목록
     private JScrollPane scrollPane;
 
-    // 데이터 및 통신 관련 변수
     private String username;
     private String ip;
     private int port;
     private DataOutputStream out;
-    private Vector<ChatRoomInfo> chatRooms; // 채팅방 데이터
-    private FriendList mainFriendList; // 뒤로가기(친구목록)를 위해 원본 창 저장
+    private Vector<ChatRoomInfo> chatRooms;
+    private FriendList mainFriendList;
 
-    // 생성자: FriendList의 정보를 받아옴
+    // FriendList의 정보를 받아오는 생성자
     public ChatRoomList(String username, String ip, int port, DataOutputStream out,
                         Vector<ChatRoomInfo> chatRooms, FriendList mainFriendList) {
         this.username = username;
@@ -43,18 +42,18 @@ public class ChatRoomList extends JFrame {
         }
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // 1. 배경 설정 (FriendList와 동일)
+        // 배경 설정 (FriendList와 동일)
         contentPane = new ImagePanel("image/abc.jpg");
         contentPane.setLayout(new BorderLayout());
         setContentPane(contentPane);
 
-        // 2. 왼쪽 사이드바 (FriendList와 동일 + 버튼 기능 변경)
+        // 왼쪽 사이드바
         JPanel sidePanel = new JPanel();
         sidePanel.setOpaque(false);
         sidePanel.setPreferredSize(new Dimension(60, 0));
         sidePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 15));
 
-        // (A) 친구 목록으로 돌아가는 버튼 (사람 아이콘)
+        //친구 목록으로 돌아가는 버튼 (사람 아이콘)
         JButton btnFriendList = new JButton();
         btnFriendList.setBorderPainted(false);
         btnFriendList.setContentAreaFilled(false);
@@ -62,16 +61,16 @@ public class ChatRoomList extends JFrame {
         btnFriendList.setMargin(new Insets(0, 0, 0, 0));
         setSidebarIcon(btnFriendList, "image/people.jpg", "P");
 
-        // [중요] 친구 목록 아이콘 클릭 시 -> 현재 창 끄고 FriendList 다시 보여주기
+        //  친구 목록 아이콘 클릭 시 -> 현재 창 끄고 FriendList 다시 보여주기
         btnFriendList.addActionListener(e -> {
-            this.setVisible(false);        // 현재 창 숨김
+            this.setVisible(false);
             if (mainFriendList != null) {
-                mainFriendList.setVisible(true); // 친구 목록 창 다시 보임
+                mainFriendList.setVisible(true);
             }
-            this.dispose(); // 메모리 해제
+            this.dispose();
         });
 
-        // (B) 채팅방 목록 아이콘 (현재 화면임)
+        // 채팅방 목록 아이콘 (현재 화면임)
         JLabel lblChatIcon = new JLabel();
         lblChatIcon.setPreferredSize(new Dimension(35, 35));
         lblChatIcon.setHorizontalAlignment(SwingConstants.CENTER);
@@ -81,11 +80,11 @@ public class ChatRoomList extends JFrame {
         sidePanel.add(lblChatIcon);
         contentPane.add(sidePanel, BorderLayout.WEST);
 
-        // 3. 오른쪽 영역 (헤더 + 리스트)
+        // 오른쪽 영역 (헤더 + 리스트)
         JPanel rightAreaPanel = new JPanel(new BorderLayout());
         rightAreaPanel.setOpaque(false);
 
-        // (A) 헤더 (제목 표시)
+        // 헤더 (제목 표시)
         JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         headerPanel.setOpaque(false);
         headerPanel.setBorder(new EmptyBorder(15, 10, 10, 10));

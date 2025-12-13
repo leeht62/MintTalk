@@ -20,13 +20,12 @@ public class JavaChatServer extends JFrame {
     private JTextField txtPortNumber;
 
     private ServerSocket serverSocket;
-    
-    // Thread-Safe한 리스트와 맵 사용
+
     private final Vector<UserService> userVec = new Vector<>(); 
     private final Vector<String> userList = new Vector<>();
     private final ConcurrentHashMap<String, ChatRoomInfo> chatRooms = new ConcurrentHashMap<>();
 
-
+    //동시성 제어하기 위해 vector와 그냥 hashmap 말고 concurrenthashmap 사용함.
     private final ConcurrentHashMap<String, String> userProfileImages = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> userBgImages = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> userStatusMsgs = new ConcurrentHashMap<>();

@@ -18,7 +18,7 @@ public class ProfileDetailDialog extends JDialog {
     public ProfileDetailDialog(JFrame owner, String username, String targetName,
                                String profileImg, String bgImg, String statusMsg,
                                DataOutputStream out) {
-        super(owner, true); // 모달 창 설정
+        super(owner, true);
         this.username = username;
         this.targetName = targetName;
         this.out = out;
@@ -47,7 +47,6 @@ public class ProfileDetailDialog extends JDialog {
             lblBgImg.setToolTipText("더블 클릭하여 배경 변경");
         }
 
-        // 콘텐츠 패널 (투명)
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(null);
         contentPanel.setBounds(0, 0, 350, 500);
