@@ -5,9 +5,6 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
-/**
- * 둥근 모서리를 가진 JTextField
- */
 public class RoundedTextField extends JTextField {
 
   private int cornerRadius = 15;

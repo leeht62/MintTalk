@@ -314,8 +314,6 @@ public class JavaChatServer extends JFrame {
         private void sendUserListToAll() {
             String listMsg = "USERLIST:" + String.join(",", userList);
             StringBuilder imageInfo = new StringBuilder();
-
-            // user1=img|bg|msg;user2=... 형식 조합
             for (String user : userList) {
                 String img = userProfileImages.getOrDefault(user, "profile.jpg");
                 String bg = userBgImages.getOrDefault(user, "ab.jpg");
@@ -326,7 +324,6 @@ public class JavaChatServer extends JFrame {
                          .append(bg).append("|")
                          .append(msg).append(";");
             }
-
             String fullMsg = listMsg + ":" + imageInfo.toString();
             broadcast(fullMsg);
         }

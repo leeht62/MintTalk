@@ -161,7 +161,6 @@ public class JavaChatClientMain extends JFrame {
                         friendList.addChatRoom(room);
                     });
                 }
-                // 🚀 [추가] 헬스케어 메시지 처리 연결
                 else if (msg.startsWith("HEALTH_BROADCAST:")) {
                     friendList.handleHealthCommand(msg);
                 }

@@ -280,7 +280,27 @@ public class JavaChatClientView extends JFrame {
                                 }
                             }
                         }
-                    } else if (!msg.startsWith("ROOM_CREATED:") && !msg.startsWith("USERLIST:") && !msg.toLowerCase().contains("welcome")) {
+                    }
+                    else if (msg.startsWith("WHISPER:")) {
+                        // 포맷: WHISPER:보낸사람:메시지
+                        String[] parts = msg.split(":", 3);
+                        if (parts.length == 3) {
+                            String sender = parts[1];
+                            String content = parts[2];
+                            // 귓속말은 좀 다르게 표시 (예: [귓속말] sender: 내용)
+                            AppendMessage(sender, "[귓속말] " + content, false, false, null);
+                        }
+                    }
+                    else if (msg.startsWith("WHISPER_SENT:")) {
+                        // 포맷: WHISPER_SENT:받는사람:메시지
+                        String[] parts = msg.split(":", 3);
+                        if (parts.length == 3) {
+                            String target = parts[1];
+                            String content = parts[2];
+                            AppendMessage(UserName, "[To:" + target + "] " + content, true, false, null);
+                        }
+                    }
+                    else if (!msg.startsWith("ROOM_CREATED:") && !msg.startsWith("USERLIST:") && !msg.toLowerCase().contains("welcome")) {
                         AppendMessage("System", msg, false, false, null);
                     }
 
@@ -297,8 +317,10 @@ public class JavaChatClientView extends JFrame {
             if (e.getSource() == btnSend || e.getSource() == txtInput) {
                 String inputMsg = txtInput.getText().trim();
                 if (inputMsg.isEmpty()) return;
-
-                if (!currentRoomName.isEmpty()) {
+                if (inputMsg.startsWith("/to ")) {
+                    SendMessage(inputMsg);
+                }
+                else if (!currentRoomName.isEmpty()) {
                     String msgToSend = "SEND_ROOM_MSG:" + currentRoomName + ":" + inputMsg;
                     SendMessage(msgToSend);
                 } else {

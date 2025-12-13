@@ -4,9 +4,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
-/**
- * 둥근 모서리를 가진 JButton
- */
 public class RoundedButton extends JButton {
 
   // 모서리의 둥근 정도

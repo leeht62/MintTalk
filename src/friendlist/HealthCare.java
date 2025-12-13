@@ -4,8 +4,6 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -20,9 +18,13 @@ public class HealthCare extends JFrame {
     private FriendList parent;
 
     // UI 컴포넌트
-    private JTextArea txtExercise, txtDiet, txtPlan;
+    // [변경] 운동은 여러 개를 담아야 하므로 리스트 모델 사용
+    private DefaultListModel<String> exerciseListModel;
+    private JList<String> exerciseList;
+
+    private JTextArea txtDiet, txtPlan;
     private JTextArea displayLog;
-    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm"); // 연도까지 표시
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
     public HealthCare(String username, DataOutputStream out, FriendList parent) {
         this.username = username;
@@ -30,32 +32,40 @@ public class HealthCare extends JFrame {
         this.parent = parent;
 
         setTitle("헬스케어 & 일정 공유 - " + username);
-        setSize(550, 750); // 크기 약간 키움
+        setSize(550, 800); // UI가 늘어났으므로 세로 길이 조금 더 확보
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
 
         // --- 상단 입력 패널 ---
-        JPanel inputPanel = new JPanel(new GridLayout(3, 1, 5, 5));
-        inputPanel.setBorder(new EmptyBorder(10, 10, 0, 10));
+        // 기존 3행 -> GridBagLayout이나 BorderLayout 조합으로 변경하여 유연하게 배치
+        JPanel mainInputPanel = new JPanel();
+        mainInputPanel.setLayout(new BoxLayout(mainInputPanel, BoxLayout.Y_AXIS));
+        mainInputPanel.setBorder(new EmptyBorder(10, 10, 0, 10));
 
-        txtExercise = createTitledTextArea("🏋️ 오늘 운동량 (Ctrl+Enter로 전송)");
-        txtDiet = createTitledTextArea("🥗 오늘 식단");
-        txtPlan = createTitledTextArea("📅 내일 계획/일정");
+        // 1. 운동 입력 패널 (새로 만듦)
+        JPanel exercisePanel = createExercisePanel();
 
-        inputPanel.add(new JScrollPane(txtExercise));
-        inputPanel.add(new JScrollPane(txtDiet));
-        inputPanel.add(new JScrollPane(txtPlan));
+        // 2. 식단, 계획 입력창 (기존 함수 재활용)
+        txtDiet = createTitledTextArea("오늘 식단");
+        txtPlan = createTitledTextArea("내일 계획/일정");
 
-        add(inputPanel, BorderLayout.CENTER);
+        // 패널에 추가
+        mainInputPanel.add(exercisePanel);
+        mainInputPanel.add(Box.createVerticalStrut(10)); // 간격
+        mainInputPanel.add(new JScrollPane(txtDiet));
+        mainInputPanel.add(Box.createVerticalStrut(10)); // 간격
+        mainInputPanel.add(new JScrollPane(txtPlan));
+
+        add(mainInputPanel, BorderLayout.CENTER);
 
         // --- 하단 버튼 및 로그 패널 ---
         JPanel bottomPanel = new JPanel(new BorderLayout(5, 5));
         bottomPanel.setBorder(new EmptyBorder(0, 10, 10, 10));
-        bottomPanel.setPreferredSize(new Dimension(0, 350)); // 로그 영역 확보
+        bottomPanel.setPreferredSize(new Dimension(0, 300));
 
-        // 버튼 패널 (전송, 저장, 지우기)
+        // 버튼 패널
         JPanel btnPanel = new JPanel(new GridLayout(1, 3, 5, 0));
-        
+
         JButton btnShare = new JButton("공유하기");
         styleButton(btnShare, new Color(70, 180, 70));
         btnShare.addActionListener(e -> sendHealthData());
@@ -74,7 +84,7 @@ public class HealthCare extends JFrame {
 
         displayLog = new JTextArea();
         displayLog.setEditable(false);
-        displayLog.setFont(new Font("Monospaced", Font.PLAIN, 13)); // 등폭 폰트로 줄맞춤
+        displayLog.setFont(new Font("Monospaced", Font.PLAIN, 13));
         displayLog.setText("=== 공유된 헬스케어 기록 ===\n");
         displayLog.setLineWrap(true);
 
@@ -86,7 +96,86 @@ public class HealthCare extends JFrame {
         setVisible(true);
     }
 
-    // 버튼 스타일링 헬퍼
+    // [핵심 변경] 운동 입력 패널 생성 함수
+    private JPanel createExercisePanel() {
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
+        panel.setBorder(new TitledBorder("🏋️ 오늘 운동량 (추가 후 공유)"));
+        panel.setPreferredSize(new Dimension(0, 150)); // 높이 고정
+
+        // 상단: 입력부 (운동명 + 시간선택 + 추가버튼)
+        JPanel inputRow = new JPanel(new BorderLayout(5, 0));
+
+        JTextField tfExName = new JTextField();
+
+        // 시간 선택 콤보박스 (30분 단위 ~ 4시간)
+        String[] times = {
+            "30분", "1시간", "1시간 30분", "2시간",
+            "2시간 30분", "3시간", "3시간 30분", "4시간"
+        };
+        JComboBox<String> cbTime = new JComboBox<>(times);
+
+        JButton btnAdd = new JButton("추가");
+        styleButton(btnAdd, new Color(100, 100, 100));
+        btnAdd.setFont(new Font("Malgun Gothic", Font.BOLD, 12));
+
+        // 리스트 모델 초기화
+        exerciseListModel = new DefaultListModel<>();
+        exerciseList = new JList<>(exerciseListModel);
+        exerciseList.setVisibleRowCount(4);
+
+        // 추가 버튼 로직
+        btnAdd.addActionListener(e -> {
+            String name = tfExName.getText().trim();
+            String time = (String) cbTime.getSelectedItem();
+
+            if (name.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "운동 종류를 입력해주세요.");
+                return;
+            }
+
+            // 리스트에 "운동명 : 시간" 형식으로 추가
+            String entry = name + " : " + time;
+            exerciseListModel.addElement(entry);
+
+            // 입력창 초기화 및 포커스
+            tfExName.setText("");
+            tfExName.requestFocus();
+        });
+
+        // 엔터키로도 추가되게 설정
+        tfExName.addActionListener(e -> btnAdd.doClick());
+
+        // 레이아웃 조립
+        JPanel rightBox = new JPanel(new BorderLayout());
+        rightBox.add(cbTime, BorderLayout.CENTER);
+        rightBox.add(btnAdd, BorderLayout.EAST);
+
+        inputRow.add(new JLabel(" 종목: "), BorderLayout.WEST);
+        inputRow.add(tfExName, BorderLayout.CENTER);
+        inputRow.add(rightBox, BorderLayout.EAST);
+
+        // 하단: 추가된 목록 리스트
+        JScrollPane listScroll = new JScrollPane(exerciseList);
+        listScroll.setBorder(new TitledBorder("추가된 운동 목록 (더블클릭시 삭제)"));
+
+        // 리스트 항목 더블클릭 시 삭제 기능
+        exerciseList.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                if (evt.getClickCount() == 2) {
+                    int index = exerciseList.locationToIndex(evt.getPoint());
+                    if (index >= 0) {
+                        exerciseListModel.remove(index);
+                    }
+                }
+            }
+        });
+
+        panel.add(inputRow, BorderLayout.NORTH);
+        panel.add(listScroll, BorderLayout.CENTER);
+
+        return panel;
+    }
+
     private void styleButton(JButton btn, Color bg) {
         btn.setFont(new Font("Malgun Gothic", Font.BOLD, 14));
         btn.setBackground(bg);
@@ -94,28 +183,23 @@ public class HealthCare extends JFrame {
         btn.setFocusPainted(false);
     }
 
-    // 입력창 생성 헬퍼 (키 리스너 추가)
     private JTextArea createTitledTextArea(String title) {
-        JTextArea ta = new JTextArea();
+        JTextArea ta = new JTextArea(4, 20); // 행 개수 지정
         ta.setLineWrap(true);
         ta.setBorder(new TitledBorder(title));
         ta.setFont(new Font("Malgun Gothic", Font.PLAIN, 14));
-        
-        // [추가] Ctrl + Enter 누르면 전송되도록 설정
-        ta.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    sendHealthData();
-                }
-            }
-        });
         return ta;
     }
 
-    // 데이터 전송
+    // 데이터 전송 로직 수정
     private void sendHealthData() {
-        String ex = txtExercise.getText().replace("|", "/").trim();
+        StringBuilder exBuilder = new StringBuilder();
+        for (int i = 0; i < exerciseListModel.size(); i++) {
+            if (i > 0) exBuilder.append(", "); // 구분자 콤마
+            exBuilder.append(exerciseListModel.get(i));
+        }
+        String ex = exBuilder.toString();
+
         String dt = txtDiet.getText().replace("|", "/").trim();
         String pl = txtPlan.getText().replace("|", "/").trim();
 
@@ -129,15 +213,12 @@ public class HealthCare extends JFrame {
         try {
             out.writeUTF(msg);
             out.flush();
-            
-            // 입력창 초기화
-            txtExercise.setText("");
+
+            // 전송 후 입력창 초기화
+            exerciseListModel.clear(); // 운동 목록 비우기
             txtDiet.setText("");
             txtPlan.setText("");
-            
-            // 포커스를 운동 입력창으로
-            txtExercise.requestFocus(); 
-            
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -146,14 +227,14 @@ public class HealthCare extends JFrame {
     // [추가] 로그 파일 저장 기능
     private void saveLogToFile() {
         String logContent = displayLog.getText();
-        if (logContent.length() < 30) { // 내용이 거의 없으면
+        if (logContent.length() < 30) {
             JOptionPane.showMessageDialog(this, "저장할 기록이 없습니다.");
             return;
         }
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setSelectedFile(new File("healthcare_log.txt"));
-        
+
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileChooser.getSelectedFile()))) {
                 writer.write(logContent);
@@ -166,31 +247,35 @@ public class HealthCare extends JFrame {
 
     // 서버로부터 받은 데이터 처리
     public void processMessage(String msg) {
-        // 프로토콜: HEALTH_BROADCAST:username:운동|식단|계획
         if (msg.startsWith("HEALTH_BROADCAST:")) {
             String[] parts = msg.split(":", 3);
             if (parts.length < 3) return;
 
             String sender = parts[1];
-            // -1 옵션: 빈 문자열도 배열에 포함시켜 인덱스 오류 방지
-            String[] data = parts[2].split("\\|", -1); 
+            String[] data = parts[2].split("\\|", -1);
 
-            if (data.length < 3) return; // 데이터 손상 방지
+            if (data.length < 3) return;
 
             String time = sdf.format(new Date());
-            
+
             StringBuilder sb = new StringBuilder();
             sb.append("\n====================================\n");
-            sb.append(" 👤 [").append(sender).append("] 님의 기록 - ").append(time).append("\n");
+            sb.append("[").append(sender).append("] 님의 기록 - ").append(time).append("\n");
             sb.append("------------------------------------\n");
-            
-            if(!data[0].trim().isEmpty()) sb.append(" 💪 운동:\n").append("    ").append(data[0]).append("\n");
-            if(!data[1].trim().isEmpty()) sb.append(" 🥗 식단:\n").append("    ").append(data[1]).append("\n");
-            if(!data[2].trim().isEmpty()) sb.append(" 📅 계획:\n").append("    ").append(data[2]).append("\n");
+
+            if(!data[0].trim().isEmpty()) {
+                sb.append("운동:\n");
+                String[] exercises = data[0].split(",");
+                for (String exercise : exercises) {
+                    sb.append("    - ").append(exercise.trim()).append("\n");
+                }
+            }
+            if(!data[1].trim().isEmpty()) sb.append("식단:\n").append("    ").append(data[1]).append("\n");
+            if(!data[2].trim().isEmpty()) sb.append("계획:\n").append("    ").append(data[2]).append("\n");
             sb.append("====================================\n");
 
             displayLog.append(sb.toString());
-            displayLog.setCaretPosition(displayLog.getDocument().getLength()); // 스크롤 맨 아래로
+            displayLog.setCaretPosition(displayLog.getDocument().getLength());
         }
     }
 }
